@@ -1,8 +1,10 @@
+
 interface GenerationRequest {
   flatSketch: string;
   materialImage?: string;
   apiKey: string;
   stream?: boolean;
+  onPartialImage?: (imageUrl: string) => void;
 }
 
 interface ImageContent {
@@ -21,7 +23,8 @@ export const generateRealisticGarment = async ({
   flatSketch,
   materialImage,
   apiKey,
-  stream = true
+  stream = true,
+  onPartialImage
 }: GenerationRequest): Promise<string> => {
   if (!apiKey) {
     throw new Error('OpenAI API key is required');
@@ -100,9 +103,11 @@ export const generateRealisticGarment = async ({
         throw new Error('Failed to get response stream reader');
       }
 
-      let imageUrl = '';
+      let finalImageUrl = '';
+      let lastPartialImageUrl = '';
       const decoder = new TextDecoder();
       let buffer = '';
+      let isCompleted = false;
 
       try {
         while (true) {
@@ -121,6 +126,7 @@ export const generateRealisticGarment = async ({
             if (line.startsWith('data: ')) {
               const data = line.slice(6).trim();
               if (data === '[DONE]') {
+                isCompleted = true;
                 break;
               }
 
@@ -134,14 +140,22 @@ export const generateRealisticGarment = async ({
                 // Look for partial image in streaming response
                 if (parsed.type === 'response.image_generation_call.partial_image' && parsed.partial_image_b64) {
                   console.log('Found partial image!');
-                  imageUrl = `data:image/png;base64,${parsed.partial_image_b64}`;
-                  break;
+                  const partialImageUrl = `data:image/png;base64,${parsed.partial_image_b64}`;
+                  lastPartialImageUrl = partialImageUrl;
+                  
+                  // Call the callback to update UI with partial image
+                  if (onPartialImage) {
+                    onPartialImage(partialImageUrl);
+                  }
+                  // Don't break here - continue to look for more partial images or final image
                 }
 
-                // Look for completed image generation
+                // Look for completed image generation (final result)
                 if (parsed.type === 'response.image_generation_call.done' && parsed.output) {
                   if (parsed.output.image_url) {
-                    imageUrl = parsed.output.image_url;
+                    console.log('Found final completed image!');
+                    finalImageUrl = parsed.output.image_url;
+                    isCompleted = true;
                     break;
                   }
                 }
@@ -155,7 +169,8 @@ export const generateRealisticGarment = async ({
                       (item.type === 'image' || item.type === 'output_image') && item.image_url
                     );
                     if (imageContent && imageContent.image_url) {
-                      imageUrl = imageContent.image_url;
+                      finalImageUrl = imageContent.image_url;
+                      isCompleted = true;
                       break;
                     }
                   }
@@ -165,7 +180,8 @@ export const generateRealisticGarment = async ({
                 if (parsed.tools_output && Array.isArray(parsed.tools_output)) {
                   const imageOutput = parsed.tools_output.find(tool => tool.type === 'image_generation');
                   if (imageOutput && imageOutput.image_url) {
-                    imageUrl = imageOutput.image_url;
+                    finalImageUrl = imageOutput.image_url;
+                    isCompleted = true;
                     break;
                   }
                 }
@@ -179,8 +195,8 @@ export const generateRealisticGarment = async ({
             }
           }
 
-          // If we found an image, break out of the reading loop
-          if (imageUrl) {
+          // If we found the final image, break out of the reading loop
+          if (isCompleted) {
             break;
           }
         }
@@ -188,11 +204,14 @@ export const generateRealisticGarment = async ({
         reader.releaseLock();
       }
 
-      if (!imageUrl) {
+      // Return the final image URL if available, otherwise the last partial image
+      const resultImageUrl = finalImageUrl || lastPartialImageUrl;
+      
+      if (!resultImageUrl) {
         throw new Error('No image found in streaming response');
       }
 
-      return imageUrl;
+      return resultImageUrl;
     } else {
       // Handle non-streaming response (fallback)
       const response = await fetch('https://api.openai.com/v1/responses', {
