@@ -15,82 +15,91 @@ export const generateRealisticGarment = async ({
   }
 
   try {
-    // Prepare the content array for GPT Image 1 generation
-    const content = [
+    // Prepare the input content array
+    const inputContent = [
       {
-        type: "text",
-        text: materialImage 
-          ? "Create a high-quality, photorealistic rendering of a garment that combines the design from this flat sketch with the texture and appearance of the reference material. The image should be professionally lit, show realistic textures and materials, and be suitable for fashion presentation. Style: photorealistic, professional fashion photography."
-          : "Create a high-quality, photorealistic rendering of a garment based on this flat sketch. The image should be professionally lit, show realistic textures and materials, and be suitable for fashion presentation. Style: photorealistic, professional fashion photography."
-      },
-      {
-        type: "image_url",
-        image_url: {
-          url: flatSketch,
-          detail: "high"
-        }
+        type: "input_image",
+        image_url: flatSketch
       }
     ];
 
     // Add material image if provided
     if (materialImage) {
-      content.push({
-        type: "image_url",
-        image_url: {
-          url: materialImage,
-          detail: "high"
-        }
+      inputContent.push({
+        type: "input_image",
+        image_url: materialImage
       });
     }
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Add text instruction
+    inputContent.push({
+      type: "input_text",
+      text: materialImage 
+        ? "Use the material reference to turn the flat sketch into a realistic garment. Create a high-quality, photorealistic rendering that combines the design from the flat sketch with the texture and appearance of the reference material. The image should be professionally lit, show realistic textures and materials, and be suitable for fashion presentation."
+        : "Turn this flat sketch into a realistic garment. Create a high-quality, photorealistic rendering based on this design. The image should be professionally lit, show realistic textures and materials, and be suitable for fashion presentation."
+    });
+
+    const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4.1-image-1",
-        messages: [
+        model: "gpt-4.1",
+        input: [
           {
             role: "user",
-            content: content
+            content: inputContent
           }
         ],
-        max_tokens: 4096,
-        temperature: 0.7
+        tools: [
+          {
+            type: "image_generation",
+            size: "auto",
+            quality: "high",
+            output_format: "png",
+            background: "transparent",
+            moderation: "auto",
+            partial_images: 1
+          }
+        ],
+        temperature: 1,
+        max_output_tokens: 2048,
+        top_p: 1,
+        store: true
       }),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.error?.message || 'Failed to generate image with GPT Image 1');
+      throw new Error(error.error?.message || 'Failed to generate image with GPT-4.1');
     }
 
     const data = await response.json();
     
-    // Extract the generated image from GPT Image 1 response
+    // Extract the generated image from the response
     if (data.choices && data.choices[0] && data.choices[0].message) {
       const message = data.choices[0].message;
       
       // Look for image content in the message
       if (message.content && Array.isArray(message.content)) {
-        const imageContent = message.content.find(item => item.type === 'image_url');
-        if (imageContent && imageContent.image_url && imageContent.image_url.url) {
-          return imageContent.image_url.url;
-        }
-      }
-      
-      // Fallback: look for image URLs in text content
-      if (message.content && typeof message.content === 'string') {
-        const imageUrlMatch = message.content.match(/https:\/\/[^\s]+\.(?:png|jpg|jpeg|gif|webp)/i);
-        if (imageUrlMatch) {
-          return imageUrlMatch[0];
+        const imageContent = message.content.find(item => item.type === 'image' || item.type === 'output_image');
+        if (imageContent && imageContent.image_url) {
+          return imageContent.image_url;
         }
       }
     }
     
-    throw new Error('No image found in GPT Image 1 response');
+    // Check if there's a generated image in the tools response
+    if (data.tools_output && Array.isArray(data.tools_output)) {
+      const imageOutput = data.tools_output.find(tool => tool.type === 'image_generation');
+      if (imageOutput && imageOutput.image_url) {
+        return imageOutput.image_url;
+      }
+    }
+    
+    throw new Error('No image found in GPT-4.1 response');
   } catch (error) {
     console.error('Image generation error:', error);
     throw error;
