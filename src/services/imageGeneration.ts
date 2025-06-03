@@ -69,8 +69,7 @@ export const generateRealisticGarment = async ({
             quality: "high",
             output_format: "png",
             background: "transparent",
-            moderation: "auto",
-            partial_images: 3
+            moderation: "auto"
           }
         ],
         temperature: 1,
