@@ -14,14 +14,8 @@ export const generateRealisticGarment = async ({
     throw new Error('OpenAI API key is required');
   }
 
-  // Construct the prompt based on the workflow shown in the image
-  let prompt = `Transform this flat sketch garment into a realistic 3D representation with a clean white background. Create a photorealistic clothing item that maintains the exact design, proportions, and details from the flat sketch.`;
-  
-  if (materialImage) {
-    prompt += ` Apply the material texture and color from the provided reference image to create a realistic fabric appearance. Ensure all topstitches, buttons, and design elements match the color and texture of the material reference.`;
-  }
-  
-  prompt += ` The final image should be high-quality, well-lit, and professionally photographed against a pure white background.`;
+  // Use the specific prompt provided by the user
+  const prompt = `Using this material, render the sketch into a realistic representation on a flat white background. Ensure all topstitches and buttons match the fabric color.`;
 
   try {
     const response = await fetch('https://api.openai.com/v1/images/generations', {
