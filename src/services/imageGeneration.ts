@@ -31,12 +31,12 @@ export const generateRealisticGarment = async ({
       });
     }
 
-    // Add text instruction
+    // Add text instruction as a separate object
     inputContent.push({
       type: "input_text",
       text: materialImage 
-        ? "Use the material reference to turn the flat sketch into a realistic garment. Create a high-quality, photorealistic rendering that combines the design from the flat sketch with the texture and appearance of the reference material. The image should be professionally lit, show realistic textures and materials, and be suitable for fashion presentation."
-        : "Turn this flat sketch into a realistic garment. Create a high-quality, photorealistic rendering based on this design. The image should be professionally lit, show realistic textures and materials, and be suitable for fashion presentation."
+        ? "use the material reference to turn the flat sketch into a realistic garment"
+        : "turn this flat sketch into a realistic garment"
     });
 
     const response = await fetch('https://api.openai.com/v1/responses', {
