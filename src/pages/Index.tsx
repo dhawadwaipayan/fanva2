@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Undo, Redo } from 'lucide-react';
+
+import { useState, useRef } from 'react';
+import { Undo, Redo, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
@@ -8,6 +9,8 @@ import { SketchCanvas } from '@/components/SketchCanvas';
 const Index = () => {
   const [activeMode, setActiveMode] = useState<'sketch' | 'render'>('sketch');
   const [activeSidebarTab, setActiveSidebarTab] = useState<'render' | 'colorways' | 'material'>('render');
+  const [materialImage, setMaterialImage] = useState<string | null>(null);
+  const materialFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUndo = () => {
     toast({
@@ -27,6 +30,44 @@ const Index = () => {
     toast({
       title: "Generate",
       description: "Starting generation process...",
+    });
+  };
+
+  const handleMaterialImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setMaterialImage(e.target?.result as string);
+          toast({
+            title: "Material image uploaded",
+            description: "Reference material has been added",
+          });
+        };
+        reader.readAsDataURL(file);
+      } else {
+        toast({
+          title: "Invalid file type",
+          description: "Please upload an image file",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleMaterialUploadClick = () => {
+    materialFileInputRef.current?.click();
+  };
+
+  const handleRemoveMaterialImage = () => {
+    setMaterialImage(null);
+    if (materialFileInputRef.current) {
+      materialFileInputRef.current.value = '';
+    }
+    toast({
+      title: "Material image removed",
+      description: "The material reference has been removed",
     });
   };
 
@@ -62,7 +103,6 @@ const Index = () => {
       <div className="flex flex-1">
         {/* Left Panel with Canvas */}
         <div className="flex-1 p-4">
-          {/* Undo/Redo Controls */}
           <div className="flex gap-2 mb-4">
             <Button
               variant="secondary"
@@ -84,7 +124,6 @@ const Index = () => {
             </Button>
           </div>
 
-          {/* Canvas Area */}
           <SketchCanvas className="h-[calc(100vh-200px)]" />
         </div>
 
@@ -116,11 +155,44 @@ const Index = () => {
             {/* Add Material Section */}
             <Card className="bg-gray-700 border-gray-600 p-6">
               <div className="text-center">
-                <div className="w-16 h-16 bg-gray-600 rounded-lg mx-auto mb-3 flex items-center justify-center">
-                  <div className="w-8 h-8 bg-gray-500 rounded"></div>
-                </div>
+                {materialImage ? (
+                  <div className="relative">
+                    <img 
+                      src={materialImage} 
+                      alt="Material reference" 
+                      className="w-16 h-16 object-cover rounded-lg mx-auto mb-3"
+                    />
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleRemoveMaterialImage}
+                      className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full"
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div 
+                    className="w-16 h-16 bg-gray-600 rounded-lg mx-auto mb-3 flex items-center justify-center cursor-pointer hover:bg-gray-500 transition-colors"
+                    onClick={handleMaterialUploadClick}
+                  >
+                    <Upload className="w-6 h-6 text-gray-400" />
+                  </div>
+                )}
                 <h3 className="text-lg font-semibold text-gray-200 mb-2">Add Material</h3>
-                <p className="text-gray-400 text-sm">Click to add new materials to your design</p>
+                <p className="text-gray-400 text-sm mb-3">
+                  {materialImage ? 'Material reference added' : 'Click to add material reference image'}
+                </p>
+                {!materialImage && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleMaterialUploadClick}
+                    className="bg-gray-600 hover:bg-gray-500 text-white"
+                  >
+                    Upload Image
+                  </Button>
+                )}
               </div>
             </Card>
 
@@ -152,6 +224,15 @@ const Index = () => {
           </div>
         </div>
       </div>
+
+      {/* Hidden file input for material */}
+      <input
+        ref={materialFileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleMaterialImageUpload}
+        className="hidden"
+      />
     </div>
   );
 };
