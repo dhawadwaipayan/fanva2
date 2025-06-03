@@ -1,6 +1,5 @@
-
 import { useState, useRef } from 'react';
-import { Undo, Redo, Upload, X, Loader2, Search } from 'lucide-react';
+import { Undo, Redo, Upload, X, Loader2, Search, Download, ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
@@ -16,6 +15,8 @@ const Index = () => {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [isPanning, setIsPanning] = useState(false);
   const materialFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUndo = () => {
@@ -81,6 +82,41 @@ const Index = () => {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleDownloadImage = () => {
+    if (!generatedImage) {
+      toast({
+        title: "No image to download",
+        description: "Please generate an image first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const link = document.createElement('a');
+    link.href = generatedImage;
+    link.download = `generated-garment-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Download started",
+      description: "Your generated image is being downloaded",
+    });
+  };
+
+  const handleZoomIn = () => {
+    setZoom(prev => Math.min(prev + 0.25, 3));
+  };
+
+  const handleZoomOut = () => {
+    setZoom(prev => Math.max(prev - 0.25, 0.5));
+  };
+
+  const handleTogglePan = () => {
+    setIsPanning(prev => !prev);
   };
 
   const handleMaterialImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -187,6 +223,47 @@ const Index = () => {
               <Redo className="w-4 h-4 mr-2" />
               Redo
             </Button>
+            <div className="flex gap-2 ml-auto">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleZoomOut}
+                className="bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleZoomIn}
+                className="bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleTogglePan}
+                className={`border-gray-600 ${
+                  isPanning 
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                    : 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                }`}
+              >
+                <Move className="w-4 h-4" />
+              </Button>
+              {generatedImage && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleDownloadImage}
+                  className="bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="bg-gray-700 rounded-lg border border-gray-600 p-4">
@@ -194,6 +271,8 @@ const Index = () => {
               className="h-[calc(100vh-280px)] rounded-lg bg-[#1B1B1B]" 
               onImageChange={setSketchImage}
               generatedImage={generatedImage}
+              zoom={zoom}
+              isPanning={isPanning}
             />
           </div>
         </div>
@@ -270,14 +349,6 @@ const Index = () => {
                     Upload Image
                   </Button>
                 )}
-              </div>
-            </Card>
-
-            {/* Text Section */}
-            <Card className="bg-gray-600 border-gray-500 p-6">
-              <div className="text-center">
-                <h3 className="text-lg font-semibold text-gray-200 mb-2">Text</h3>
-                <p className="text-gray-400 text-sm">Add and customize text elements</p>
               </div>
             </Card>
           </div>

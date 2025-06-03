@@ -9,11 +9,23 @@ interface SketchCanvasProps {
   className?: string;
   onImageChange?: (image: string | null) => void;
   generatedImage?: string | null;
+  zoom?: number;
+  isPanning?: boolean;
 }
 
-export const SketchCanvas = ({ className, onImageChange, generatedImage }: SketchCanvasProps) => {
+export const SketchCanvas = ({ 
+  className, 
+  onImageChange, 
+  generatedImage, 
+  zoom = 1,
+  isPanning = false 
+}: SketchCanvasProps) => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Update the displayed image when a new one is generated
   useEffect(() => {
@@ -49,12 +61,15 @@ export const SketchCanvas = ({ className, onImageChange, generatedImage }: Sketc
   };
 
   const handleUploadClick = () => {
-    fileInputRef.current?.click();
+    if (!isPanning) {
+      fileInputRef.current?.click();
+    }
   };
 
   const handleRemoveImage = () => {
     setUploadedImage(null);
     onImageChange?.(null);
+    setPanOffset({ x: 0, y: 0 });
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -64,8 +79,40 @@ export const SketchCanvas = ({ className, onImageChange, generatedImage }: Sketc
     });
   };
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (isPanning && uploadedImage) {
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && isPanning) {
+      setPanOffset({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
   return (
-    <Card className={`bg-gray-800 border-gray-700 flex items-center justify-center relative overflow-hidden ${className}`}>
+    <Card 
+      ref={containerRef}
+      className={`bg-gray-800 border-gray-700 flex items-center justify-center relative overflow-hidden ${className}`}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
+      style={{ cursor: isPanning && uploadedImage ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
+    >
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-800"></div>
       
@@ -85,19 +132,30 @@ export const SketchCanvas = ({ className, onImageChange, generatedImage }: Sketc
       <div className="relative z-10 w-full h-full flex items-center justify-center p-8">
         {uploadedImage ? (
           <div className="relative max-w-full max-h-full">
-            <img 
-              src={uploadedImage} 
-              alt="Uploaded sketch" 
-              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-            />
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleRemoveImage}
-              className="absolute top-2 right-2 w-8 h-8 p-0"
+            <div
+              style={{
+                transform: `scale(${zoom}) translate(${panOffset.x / zoom}px, ${panOffset.y / zoom}px)`,
+                transformOrigin: 'center center',
+                transition: isDragging ? 'none' : 'transform 0.2s ease'
+              }}
             >
-              <X className="w-4 h-4" />
-            </Button>
+              <img 
+                src={uploadedImage} 
+                alt="Uploaded sketch" 
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                draggable={false}
+              />
+            </div>
+            {!isPanning && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleRemoveImage}
+                className="absolute top-2 right-2 w-8 h-8 p-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            )}
           </div>
         ) : (
           <div 
