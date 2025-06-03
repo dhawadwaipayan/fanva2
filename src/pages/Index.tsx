@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { Undo, Redo, Upload, X, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -121,14 +122,14 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col">
+    <div className="min-h-screen bg-[#1B1B1B] text-gray-100 flex flex-col">
       {/* Top Navigation */}
-      <div className="flex justify-between items-center p-6 border-b border-gray-800">
+      <div className="flex justify-between items-center p-6 border-b border-gray-700">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center">
-            <div className="w-6 h-6 bg-gray-600 rounded grid grid-cols-3 gap-0.5">
+          <div className="w-10 h-10 bg-gray-700 rounded-lg flex items-center justify-center">
+            <div className="w-6 h-6 bg-gray-500 rounded grid grid-cols-3 gap-0.5">
               {[...Array(9)].map((_, i) => (
-                <div key={i} className="bg-gray-400 rounded-sm"></div>
+                <div key={i} className="bg-gray-300 rounded-sm"></div>
               ))}
             </div>
           </div>
@@ -139,7 +140,7 @@ const Index = () => {
 
       {/* Mode Toggle */}
       <div className="flex justify-center p-6">
-        <div className="bg-gray-800 rounded-lg p-1 flex border border-gray-700">
+        <div className="bg-gray-700 rounded-lg p-1 flex border border-gray-600">
           <button
             onClick={() => setActiveMode('sketch')}
             className={`px-6 py-2 rounded-md transition-all duration-200 font-medium text-sm ${
@@ -172,7 +173,7 @@ const Index = () => {
               variant="secondary"
               size="sm"
               onClick={handleUndo}
-              className="bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700"
+              className="bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600"
             >
               <Undo className="w-4 h-4 mr-2" />
               Undo
@@ -181,16 +182,16 @@ const Index = () => {
               variant="secondary"
               size="sm"
               onClick={handleRedo}
-              className="bg-gray-800 hover:bg-gray-700 text-gray-200 border-gray-700"
+              className="bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600"
             >
               <Redo className="w-4 h-4 mr-2" />
               Redo
             </Button>
           </div>
 
-          <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+          <div className="bg-gray-700 rounded-lg border border-gray-600 p-4">
             <SketchCanvas 
-              className="h-[calc(100vh-280px)] rounded-lg bg-gray-900" 
+              className="h-[calc(100vh-280px)] rounded-lg bg-[#1B1B1B]" 
               onImageChange={setSketchImage}
               generatedImage={generatedImage}
             />
@@ -198,9 +199,9 @@ const Index = () => {
         </div>
 
         {/* Right Sidebar */}
-        <div className="w-80 bg-gray-800 border border-gray-700 rounded-lg flex flex-col overflow-hidden">
+        <div className="w-80 bg-gray-700 border border-gray-600 rounded-lg flex flex-col overflow-hidden">
           {/* Sidebar Tabs */}
-          <div className="flex bg-gray-850 border-b border-gray-700">
+          <div className="flex bg-gray-800 border-b border-gray-600">
             {[
               { key: 'render', label: 'Render' },
               { key: 'colorways', label: 'Colorways' },
@@ -211,8 +212,8 @@ const Index = () => {
                 onClick={() => setActiveSidebarTab(tab.key as any)}
                 className={`flex-1 py-4 px-4 text-sm font-medium transition-all duration-200 ${
                   activeSidebarTab === tab.key
-                    ? 'bg-gray-800 text-white border-b-2 border-blue-500'
-                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                    ? 'bg-gray-700 text-white border-b-2 border-blue-500'
+                    : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
                 }`}
               >
                 {tab.label}
@@ -229,7 +230,7 @@ const Index = () => {
             />
 
             {/* Add Material Section */}
-            <Card className="bg-gray-750 border-gray-600 p-6">
+            <Card className="bg-gray-600 border-gray-500 p-6">
               <div className="text-center">
                 {materialImage ? (
                   <div className="relative">
@@ -249,10 +250,10 @@ const Index = () => {
                   </div>
                 ) : (
                   <div 
-                    className="w-16 h-16 bg-gray-700 rounded-lg mx-auto mb-4 flex items-center justify-center cursor-pointer hover:bg-gray-600 transition-colors border border-gray-600"
+                    className="w-16 h-16 bg-gray-500 rounded-lg mx-auto mb-4 flex items-center justify-center cursor-pointer hover:bg-gray-400 transition-colors border border-gray-400"
                     onClick={handleMaterialUploadClick}
                   >
-                    <Upload className="w-6 h-6 text-gray-400" />
+                    <Upload className="w-6 h-6 text-gray-300" />
                   </div>
                 )}
                 <h3 className="text-lg font-semibold text-gray-200 mb-2">Add Material</h3>
@@ -264,7 +265,7 @@ const Index = () => {
                     variant="secondary"
                     size="sm"
                     onClick={handleMaterialUploadClick}
-                    className="bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600"
+                    className="bg-gray-500 hover:bg-gray-400 text-gray-200 border-gray-400"
                   >
                     Upload Image
                   </Button>
@@ -273,7 +274,7 @@ const Index = () => {
             </Card>
 
             {/* Text Section */}
-            <Card className="bg-gray-750 border-gray-600 p-6">
+            <Card className="bg-gray-600 border-gray-500 p-6">
               <div className="text-center">
                 <h3 className="text-lg font-semibold text-gray-200 mb-2">Text</h3>
                 <p className="text-gray-400 text-sm">Add and customize text elements</p>
@@ -282,11 +283,11 @@ const Index = () => {
           </div>
 
           {/* Bottom Controls */}
-          <div className="p-6 border-t border-gray-700 bg-gray-850 space-y-3">
+          <div className="p-6 border-t border-gray-600 bg-gray-800 space-y-3">
             <div className="flex gap-3">
               <Button 
                 variant="secondary" 
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600"
+                className="flex-1 bg-gray-600 hover:bg-gray-500 text-gray-200 border-gray-500"
               >
                 Sides
               </Button>
