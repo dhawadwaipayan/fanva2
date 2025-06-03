@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { Undo, Redo, Upload, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -121,26 +122,26 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col">
+    <div className="min-h-screen bg-[#E8DDD4] text-gray-900 flex flex-col">
       {/* Top Navigation */}
-      <div className="flex justify-center p-4">
-        <div className="bg-gray-700 rounded-lg p-1 flex">
+      <div className="flex justify-center p-6">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-1.5 flex shadow-lg border border-white/20">
           <button
             onClick={() => setActiveMode('sketch')}
-            className={`px-6 py-2 rounded-md transition-all duration-200 font-medium ${
+            className={`px-8 py-3 rounded-xl transition-all duration-300 font-medium text-sm ${
               activeMode === 'sketch'
-                ? 'bg-gray-600 text-white shadow-lg'
-                : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                ? 'bg-white text-gray-900 shadow-md'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
             }`}
           >
             Sketch
           </button>
           <button
             onClick={() => setActiveMode('render')}
-            className={`px-6 py-2 rounded-md transition-all duration-200 font-medium ${
+            className={`px-8 py-3 rounded-xl transition-all duration-300 font-medium text-sm ${
               activeMode === 'render'
-                ? 'bg-gray-600 text-white shadow-lg'
-                : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                ? 'bg-white text-gray-900 shadow-md'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
             }`}
           >
             Render
@@ -149,15 +150,15 @@ const Index = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1">
+      <div className="flex flex-1 gap-6 px-6 pb-6">
         {/* Left Panel with Canvas */}
-        <div className="flex-1 p-4">
-          <div className="flex gap-2 mb-4">
+        <div className="flex-1">
+          <div className="flex gap-3 mb-6">
             <Button
               variant="secondary"
               size="sm"
               onClick={handleUndo}
-              className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+              className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 border-0 shadow-md rounded-xl font-medium"
             >
               <Undo className="w-4 h-4 mr-2" />
               Undo
@@ -166,24 +167,26 @@ const Index = () => {
               variant="secondary"
               size="sm"
               onClick={handleRedo}
-              className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+              className="bg-white/80 backdrop-blur-sm hover:bg-white text-gray-700 border-0 shadow-md rounded-xl font-medium"
             >
               <Redo className="w-4 h-4 mr-2" />
               Redo
             </Button>
           </div>
 
-          <SketchCanvas 
-            className="h-[calc(100vh-200px)]" 
-            onImageChange={setSketchImage}
-            generatedImage={generatedImage}
-          />
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-white/20 p-4">
+            <SketchCanvas 
+              className="h-[calc(100vh-280px)] rounded-2xl" 
+              onImageChange={setSketchImage}
+              generatedImage={generatedImage}
+            />
+          </div>
         </div>
 
         {/* Right Sidebar */}
-        <div className="w-80 bg-gray-800 border-l border-gray-700 flex flex-col">
+        <div className="w-80 bg-white/80 backdrop-blur-sm border border-white/20 rounded-3xl shadow-lg flex flex-col overflow-hidden">
           {/* Sidebar Tabs */}
-          <div className="flex bg-gray-700 border-b border-gray-600">
+          <div className="flex bg-gray-50/50 border-b border-gray-200/50">
             {[
               { key: 'render', label: 'Render' },
               { key: 'colorways', label: 'Colorways' },
@@ -192,10 +195,10 @@ const Index = () => {
               <button
                 key={tab.key}
                 onClick={() => setActiveSidebarTab(tab.key as any)}
-                className={`flex-1 py-3 px-4 text-sm font-medium transition-all duration-200 ${
+                className={`flex-1 py-4 px-4 text-sm font-medium transition-all duration-200 ${
                   activeSidebarTab === tab.key
-                    ? 'bg-gray-600 text-white border-b-2 border-blue-500'
-                    : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                    ? 'bg-white text-gray-900 border-b-2 border-gray-900'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
                 }`}
               >
                 {tab.label}
@@ -204,7 +207,7 @@ const Index = () => {
           </div>
 
           {/* Sidebar Content */}
-          <div className="flex-1 p-4 space-y-4">
+          <div className="flex-1 p-6 space-y-6 overflow-y-auto">
             {/* Generation Settings */}
             <GenerationSettings 
               apiKey={apiKey}
@@ -212,34 +215,34 @@ const Index = () => {
             />
 
             {/* Add Material Section */}
-            <Card className="bg-gray-700 border-gray-600 p-6">
+            <Card className="bg-white/60 border-white/30 shadow-sm rounded-2xl p-6 backdrop-blur-sm">
               <div className="text-center">
                 {materialImage ? (
                   <div className="relative">
                     <img 
                       src={materialImage} 
                       alt="Material reference" 
-                      className="w-16 h-16 object-cover rounded-lg mx-auto mb-3"
+                      className="w-16 h-16 object-cover rounded-2xl mx-auto mb-4 shadow-md"
                     />
                     <Button
                       variant="destructive"
                       size="sm"
                       onClick={handleRemoveMaterialImage}
-                      className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full"
+                      className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full bg-red-100 hover:bg-red-200 text-red-600 border-0 shadow-md"
                     >
                       <X className="w-3 h-3" />
                     </Button>
                   </div>
                 ) : (
                   <div 
-                    className="w-16 h-16 bg-gray-600 rounded-lg mx-auto mb-3 flex items-center justify-center cursor-pointer hover:bg-gray-500 transition-colors"
+                    className="w-16 h-16 bg-gray-100 rounded-2xl mx-auto mb-4 flex items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors shadow-sm"
                     onClick={handleMaterialUploadClick}
                   >
                     <Upload className="w-6 h-6 text-gray-400" />
                   </div>
                 )}
-                <h3 className="text-lg font-semibold text-gray-200 mb-2">Add Material</h3>
-                <p className="text-gray-400 text-sm mb-3">
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Add Material</h3>
+                <p className="text-gray-600 text-sm mb-4">
                   {materialImage ? 'Material reference added' : 'Click to add material reference image'}
                 </p>
                 {!materialImage && (
@@ -247,7 +250,7 @@ const Index = () => {
                     variant="secondary"
                     size="sm"
                     onClick={handleMaterialUploadClick}
-                    className="bg-gray-600 hover:bg-gray-500 text-white"
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 border-0 rounded-xl font-medium shadow-sm"
                   >
                     Upload Image
                   </Button>
@@ -256,27 +259,27 @@ const Index = () => {
             </Card>
 
             {/* Text Section */}
-            <Card className="bg-gray-700 border-gray-600 p-6">
+            <Card className="bg-white/60 border-white/30 shadow-sm rounded-2xl p-6 backdrop-blur-sm">
               <div className="text-center">
-                <h3 className="text-lg font-semibold text-gray-200 mb-2">Text</h3>
-                <p className="text-gray-400 text-sm">Add and customize text elements</p>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Text</h3>
+                <p className="text-gray-600 text-sm">Add and customize text elements</p>
               </div>
             </Card>
           </div>
 
           {/* Bottom Controls */}
-          <div className="p-4 border-t border-gray-700 space-y-2">
-            <div className="flex gap-2">
+          <div className="p-6 border-t border-gray-200/50 bg-gray-50/30 space-y-3">
+            <div className="flex gap-3">
               <Button 
                 variant="secondary" 
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
+                className="flex-1 bg-white/80 hover:bg-white text-gray-700 border-0 rounded-xl font-medium shadow-sm backdrop-blur-sm"
               >
                 Sides
               </Button>
               <Button 
                 onClick={handleGenerate}
                 disabled={isGenerating}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                className="flex-1 bg-gray-900 hover:bg-gray-800 text-white disabled:opacity-50 rounded-xl font-medium shadow-md transition-all duration-200"
               >
                 {isGenerating ? (
                   <>
