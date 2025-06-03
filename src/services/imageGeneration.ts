@@ -15,13 +15,13 @@ export const generateRealisticGarment = async ({
   }
 
   try {
-    // First, use GPT-4o to analyze the images and create a detailed prompt
+    // Prepare the content array for GPT Image 1 generation
     const content = [
       {
         type: "text",
         text: materialImage 
-          ? "Analyze this flat sketch and material reference. Create a detailed description for generating a realistic garment that combines the design from the sketch with the texture and appearance of the reference material. Focus on realistic rendering details, lighting, and professional presentation."
-          : "Analyze this flat sketch and create a detailed description for generating a realistic garment rendering. Focus on realistic textures, proper lighting, professional presentation, and high-quality details."
+          ? "Create a high-quality, photorealistic rendering of a garment that combines the design from this flat sketch with the texture and appearance of the reference material. The image should be professionally lit, show realistic textures and materials, and be suitable for fashion presentation. Style: photorealistic, professional fashion photography."
+          : "Create a high-quality, photorealistic rendering of a garment based on this flat sketch. The image should be professionally lit, show realistic textures and materials, and be suitable for fashion presentation. Style: photorealistic, professional fashion photography."
       },
       {
         type: "image_url",
@@ -43,66 +43,54 @@ export const generateRealisticGarment = async ({
       });
     }
 
-    const analysisResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "gpt-4.1-image-1",
         messages: [
           {
             role: "user",
             content: content
           }
         ],
-        max_tokens: 500,
+        max_tokens: 4096,
         temperature: 0.7
       }),
     });
 
-    if (!analysisResponse.ok) {
-      const error = await analysisResponse.json();
-      throw new Error(error.error?.message || 'Failed to analyze images');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Failed to generate image with GPT Image 1');
     }
 
-    const analysisData = await analysisResponse.json();
-    const description = analysisData.choices[0]?.message?.content;
-
-    if (!description) {
-      throw new Error('No description generated from image analysis');
-    }
-
-    // Now use DALL-E 3 to generate the realistic garment image
-    const imageResponse = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: `Create a high-quality, photorealistic rendering of a garment based on this description: ${description}. The image should be professionally lit, show realistic textures and materials, and be suitable for fashion presentation. Style: photorealistic, professional fashion photography.`,
-        n: 1,
-        size: "1024x1024",
-        quality: "hd",
-        style: "natural"
-      }),
-    });
-
-    if (!imageResponse.ok) {
-      const error = await imageResponse.json();
-      throw new Error(error.error?.message || 'Failed to generate image with DALL-E');
-    }
-
-    const imageData = await imageResponse.json();
+    const data = await response.json();
     
-    if (imageData.data && imageData.data[0] && imageData.data[0].url) {
-      return imageData.data[0].url;
-    } else {
-      throw new Error('No image URL found in DALL-E response');
+    // Extract the generated image from GPT Image 1 response
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      const message = data.choices[0].message;
+      
+      // Look for image content in the message
+      if (message.content && Array.isArray(message.content)) {
+        const imageContent = message.content.find(item => item.type === 'image_url');
+        if (imageContent && imageContent.image_url && imageContent.image_url.url) {
+          return imageContent.image_url.url;
+        }
+      }
+      
+      // Fallback: look for image URLs in text content
+      if (message.content && typeof message.content === 'string') {
+        const imageUrlMatch = message.content.match(/https:\/\/[^\s]+\.(?:png|jpg|jpeg|gif|webp)/i);
+        if (imageUrlMatch) {
+          return imageUrlMatch[0];
+        }
+      }
     }
+    
+    throw new Error('No image found in GPT Image 1 response');
   } catch (error) {
     console.error('Image generation error:', error);
     throw error;
