@@ -1,4 +1,3 @@
-
 interface GenerationRequest {
   flatSketch: string;
   materialImage?: string;
@@ -103,26 +102,51 @@ export const generateRealisticGarment = async ({
 
       let imageUrl = '';
       const decoder = new TextDecoder();
+      let buffer = '';
 
       try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n');
+          // Accumulate chunks in buffer
+          buffer += decoder.decode(value, { stream: true });
+          
+          // Split by lines and process complete lines
+          const lines = buffer.split('\n');
+          // Keep the last (potentially incomplete) line in buffer
+          buffer = lines.pop() || '';
 
           for (const line of lines) {
             if (line.startsWith('data: ')) {
-              const data = line.slice(6);
+              const data = line.slice(6).trim();
               if (data === '[DONE]') {
                 break;
               }
 
+              // Skip empty data lines
+              if (!data) continue;
+
               try {
                 const parsed = JSON.parse(data);
+                console.log('Parsed streaming data:', parsed);
                 
-                // Look for image content in the streaming response
+                // Look for partial image in streaming response
+                if (parsed.type === 'response.image_generation_call.partial_image' && parsed.partial_image_b64) {
+                  console.log('Found partial image!');
+                  imageUrl = `data:image/png;base64,${parsed.partial_image_b64}`;
+                  break;
+                }
+
+                // Look for completed image generation
+                if (parsed.type === 'response.image_generation_call.done' && parsed.output) {
+                  if (parsed.output.image_url) {
+                    imageUrl = parsed.output.image_url;
+                    break;
+                  }
+                }
+
+                // Alternative: Look for image content in choices
                 if (parsed.choices && parsed.choices[0] && parsed.choices[0].delta) {
                   const delta = parsed.choices[0].delta;
                   
@@ -132,6 +156,7 @@ export const generateRealisticGarment = async ({
                     );
                     if (imageContent && imageContent.image_url) {
                       imageUrl = imageContent.image_url;
+                      break;
                     }
                   }
                 }
@@ -141,12 +166,22 @@ export const generateRealisticGarment = async ({
                   const imageOutput = parsed.tools_output.find(tool => tool.type === 'image_generation');
                   if (imageOutput && imageOutput.image_url) {
                     imageUrl = imageOutput.image_url;
+                    break;
                   }
                 }
               } catch (parseError) {
-                console.warn('Failed to parse streaming chunk:', parseError);
+                // Don't log every parse error as they're common with streaming
+                // Only log if it looks like it should be valid JSON
+                if (data.startsWith('{') && data.endsWith('}')) {
+                  console.warn('Failed to parse complete streaming chunk:', parseError);
+                }
               }
             }
+          }
+
+          // If we found an image, break out of the reading loop
+          if (imageUrl) {
+            break;
           }
         }
       } finally {
