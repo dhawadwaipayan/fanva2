@@ -32,8 +32,7 @@ export const generateRealisticGarment = async ({
         model: 'gpt-image-1',
         prompt: prompt,
         n: 1,
-        size: '1024x1024',
-        response_format: 'b64_json'
+        size: '1024x1024'
       }),
     });
 
