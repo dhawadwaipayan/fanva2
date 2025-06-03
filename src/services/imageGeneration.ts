@@ -14,7 +14,7 @@ export const generateRealisticGarment = async ({
     throw new Error('OpenAI API key is required');
   }
 
-  // Prepare the messages for GPT-4o vision API
+  // Prepare the messages for GPT Image 1 model
   const messages = [
     {
       role: "user",
@@ -51,7 +51,7 @@ export const generateRealisticGarment = async ({
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-image-1',
         messages: messages,
         max_tokens: 4096
       }),
@@ -64,7 +64,7 @@ export const generateRealisticGarment = async ({
 
     const data = await response.json();
     
-    // Since GPT-4o returns text, we'll need to handle this differently
+    // Since GPT Image 1 returns text, we'll need to handle this differently
     // For now, return the response content as it might contain image data or instructions
     return data.choices[0].message.content;
   } catch (error) {
