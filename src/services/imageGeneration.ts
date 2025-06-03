@@ -1,9 +1,20 @@
-
 interface GenerationRequest {
   flatSketch: string;
   materialImage?: string;
   apiKey: string;
 }
+
+interface ImageContent {
+  type: "input_image";
+  image_url: string;
+}
+
+interface TextContent {
+  type: "input_text";
+  text: string;
+}
+
+type ContentItem = ImageContent | TextContent;
 
 export const generateRealisticGarment = async ({
   flatSketch,
@@ -15,8 +26,8 @@ export const generateRealisticGarment = async ({
   }
 
   try {
-    // Prepare the input content array
-    const inputContent = [
+    // Prepare the input content array with proper typing
+    const inputContent: ContentItem[] = [
       {
         type: "input_image",
         image_url: flatSketch
