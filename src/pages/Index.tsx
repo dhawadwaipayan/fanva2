@@ -1,305 +1,230 @@
-import { useState, useRef } from 'react';
-import { Undo, Redo, Upload, X, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { toast } from '@/hooks/use-toast';
-import { SketchCanvas } from '@/components/SketchCanvas';
-import { GenerationSettings } from '@/components/GenerationSettings';
-import { generateRealisticGarment } from '@/services/imageGeneration';
+import { Button } from '@/components/ui/button';
+import { ArrowUp, User } from 'lucide-react';
 
 const Index = () => {
-  const [activeMode, setActiveMode] = useState<'sketch' | 'render'>('sketch');
-  const [activeSidebarTab, setActiveSidebarTab] = useState<'render' | 'colorways' | 'material'>('render');
-  const [materialImage, setMaterialImage] = useState<string | null>(null);
-  const [sketchImage, setSketchImage] = useState<string | null>(null);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [apiKey, setApiKey] = useState<string>('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const materialFileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
 
-  const handleUndo = () => {
-    toast({
-      title: "Undo",
-      description: "Last action has been undone",
-    });
-  };
+  const moodEmojis = [
+    { emoji: '😊', label: 'Happy', color: 'bg-yellow-200' },
+    { emoji: '😌', label: 'Calm', color: 'bg-green-200' },
+    { emoji: '😠', label: 'Angry', color: 'bg-red-200' },
+    { emoji: '😍', label: 'Excited', color: 'bg-blue-200' },
+    { emoji: '😰', label: 'Anxious', color: 'bg-gray-200' },
+    { emoji: '😢', label: 'Sad', color: 'bg-purple-200' },
+  ];
 
-  const handleRedo = () => {
-    toast({
-      title: "Redo", 
-      description: "Action has been redone",
-    });
-  };
+  const progressData = Array.from({ length: 42 }, (_, i) => ({
+    filled: Math.random() > 0.3,
+    day: i + 1
+  }));
 
-  const handleGenerate = async () => {
-    if (!apiKey) {
-      toast({
-        title: "API Key Required",
-        description: "Please enter your OpenAI API key to generate images",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!sketchImage) {
-      toast({
-        title: "Sketch Required",
-        description: "Please upload a flat sketch first",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsGenerating(true);
-    
-    try {
-      toast({
-        title: "Generation Started",
-        description: "AI is creating your realistic garment...",
-      });
-
-      const generatedUrl = await generateRealisticGarment({
-        flatSketch: sketchImage,
-        materialImage: materialImage || undefined,
-        apiKey: apiKey
-      });
-
-      setGeneratedImage(generatedUrl);
-      
-      toast({
-        title: "Generation Complete!",
-        description: "Your realistic garment has been generated",
-      });
-    } catch (error) {
-      console.error('Generation failed:', error);
-      toast({
-        title: "Generation Failed",
-        description: error instanceof Error ? error.message : "Failed to generate image",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleMaterialImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          setMaterialImage(e.target?.result as string);
-          toast({
-            title: "Material image uploaded",
-            description: "Reference material has been added",
-          });
-        };
-        reader.readAsDataURL(file);
-      } else {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload an image file",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  const handleMaterialUploadClick = () => {
-    materialFileInputRef.current?.click();
-  };
-
-  const handleRemoveMaterialImage = () => {
-    setMaterialImage(null);
-    if (materialFileInputRef.current) {
-      materialFileInputRef.current.value = '';
-    }
-    toast({
-      title: "Material image removed",
-      description: "The material reference has been removed",
-    });
-  };
+  const satisfactionData = [
+    { emotion: 'Happiness', percentage: 51, color: 'bg-yellow-400' },
+    { emotion: 'Calmness', percentage: 72, color: 'bg-green-500' },
+    { emotion: 'Anger', percentage: 23, color: 'bg-red-400' },
+    { emotion: 'Excitement', percentage: 77, color: 'bg-blue-500' },
+    { emotion: 'Sadness', percentage: 69, color: 'bg-yellow-300' },
+    { emotion: 'Stress', percentage: 93, color: 'bg-gray-400' },
+    { emotion: 'Sadness', percentage: 64, color: 'bg-purple-400' },
+    { emotion: 'Stress', percentage: 108, color: 'bg-green-600' },
+    { emotion: 'Stress', percentage: 101, color: 'bg-red-500' }
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex flex-col">
-      {/* Top Navigation */}
-      <div className="flex justify-center p-4">
-        <div className="bg-gray-700 rounded-lg p-1 flex">
-          <button
-            onClick={() => setActiveMode('sketch')}
-            className={`px-6 py-2 rounded-md transition-all duration-200 font-medium ${
-              activeMode === 'sketch'
-                ? 'bg-gray-600 text-white shadow-lg'
-                : 'text-gray-300 hover:text-white hover:bg-gray-600'
-            }`}
-          >
-            Sketch
-          </button>
-          <button
-            onClick={() => setActiveMode('render')}
-            className={`px-6 py-2 rounded-md transition-all duration-200 font-medium ${
-              activeMode === 'render'
-                ? 'bg-gray-600 text-white shadow-lg'
-                : 'text-gray-300 hover:text-white hover:bg-gray-600'
-            }`}
-          >
-            Render
-          </button>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex flex-1">
-        {/* Left Panel with Canvas */}
-        <div className="flex-1 p-4">
-          <div className="flex gap-2 mb-4">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleUndo}
-              className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
-            >
-              <Undo className="w-4 h-4 mr-2" />
-              Undo
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleRedo}
-              className="bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
-            >
-              <Redo className="w-4 h-4 mr-2" />
-              Redo
-            </Button>
-          </div>
-
-          <SketchCanvas 
-            className="h-[calc(100vh-200px)]" 
-            onImageChange={setSketchImage}
-            generatedImage={generatedImage}
-          />
-        </div>
-
-        {/* Right Sidebar */}
-        <div className="w-80 bg-gray-800 border-l border-gray-700 flex flex-col">
-          {/* Sidebar Tabs */}
-          <div className="flex bg-gray-700 border-b border-gray-600">
-            {[
-              { key: 'render', label: 'Render' },
-              { key: 'colorways', label: 'Colorways' },
-              { key: 'material', label: 'Material' }
-            ].map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveSidebarTab(tab.key as any)}
-                className={`flex-1 py-3 px-4 text-sm font-medium transition-all duration-200 ${
-                  activeSidebarTab === tab.key
-                    ? 'bg-gray-600 text-white border-b-2 border-blue-500'
-                    : 'text-gray-300 hover:text-white hover:bg-gray-600'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Sidebar Content */}
-          <div className="flex-1 p-4 space-y-4">
-            {/* Generation Settings */}
-            <GenerationSettings 
-              apiKey={apiKey}
-              onApiKeyChange={setApiKey}
-            />
-
-            {/* Add Material Section */}
-            <Card className="bg-gray-700 border-gray-600 p-6">
-              <div className="text-center">
-                {materialImage ? (
-                  <div className="relative">
-                    <img 
-                      src={materialImage} 
-                      alt="Material reference" 
-                      className="w-16 h-16 object-cover rounded-lg mx-auto mb-3"
-                    />
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={handleRemoveMaterialImage}
-                      className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full"
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div 
-                    className="w-16 h-16 bg-gray-600 rounded-lg mx-auto mb-3 flex items-center justify-center cursor-pointer hover:bg-gray-500 transition-colors"
-                    onClick={handleMaterialUploadClick}
-                  >
-                    <Upload className="w-6 h-6 text-gray-400" />
-                  </div>
-                )}
-                <h3 className="text-lg font-semibold text-gray-200 mb-2">Add Material</h3>
-                <p className="text-gray-400 text-sm mb-3">
-                  {materialImage ? 'Material reference added' : 'Click to add material reference image'}
-                </p>
-                {!materialImage && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleMaterialUploadClick}
-                    className="bg-gray-600 hover:bg-gray-500 text-white"
-                  >
-                    Upload Image
-                  </Button>
-                )}
+    <div className="min-h-screen bg-[#E8DDD4] p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Main Greeting Card */}
+          <Card className="bg-[#E8DDD4] border-none shadow-none p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 bg-black rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-white" />
               </div>
-            </Card>
-
-            {/* Text Section */}
-            <Card className="bg-gray-700 border-gray-600 p-6">
-              <div className="text-center">
-                <h3 className="text-lg font-semibold text-gray-200 mb-2">Text</h3>
-                <p className="text-gray-400 text-sm">Add and customize text elements</p>
-              </div>
-            </Card>
-          </div>
-
-          {/* Bottom Controls */}
-          <div className="p-4 border-t border-gray-700 space-y-2">
-            <div className="flex gap-2">
-              <Button 
-                variant="secondary" 
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white border-gray-600"
-              >
-                Sides
-              </Button>
-              <Button 
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  'Generate'
-                )}
-              </Button>
+              <span className="text-lg font-medium">Nixtio</span>
             </div>
+            
+            <h1 className="text-4xl font-light leading-tight mb-8">
+              Hello, <span className="text-black">Nixtio</span><br />
+              How do you feel<br />
+              about your <span className="font-semibold">current<br />
+              emotions?</span>
+            </h1>
+
+            <div>
+              <h3 className="text-lg font-medium mb-4">Daily Mood Log</h3>
+              <div className="flex gap-3">
+                {moodEmojis.map((mood, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedMood(mood.label)}
+                    className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition-all hover:scale-110 ${
+                      selectedMood === mood.label ? 'ring-2 ring-black' : ''
+                    } ${mood.color}`}
+                  >
+                    {mood.emoji}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          {/* Progress Card */}
+          <Card className="bg-white rounded-3xl p-8 shadow-sm">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-lg font-medium text-gray-600 mb-2">Your progress</h2>
+                <div className="text-6xl font-light">89%</div>
+                <p className="text-sm text-gray-500 mt-2">
+                  Of the weekly<br />plan completed
+                </p>
+              </div>
+              <button className="p-2">
+                <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                <div className="w-1 h-1 bg-gray-400 rounded-full mt-1"></div>
+                <div className="w-1 h-1 bg-gray-400 rounded-full mt-1"></div>
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-7 gap-2">
+              {progressData.map((day, index) => (
+                <div
+                  key={index}
+                  className={`w-8 h-8 rounded-full ${
+                    day.filled ? 'bg-teal-300' : 'border-2 border-gray-200'
+                  }`}
+                />
+              ))}
+            </div>
+          </Card>
+
+          {/* Bottom Row Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* My Strengths Card */}
+            <Card className="bg-blue-200 rounded-3xl p-8 shadow-sm relative overflow-hidden">
+              <h3 className="text-xl font-medium mb-2">My Strengths</h3>
+              <p className="text-lg">&amp; Qualities</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute bottom-6 right-6 p-2 hover:bg-blue-300/50"
+              >
+                <ArrowUp className="w-4 h-4 rotate-45" />
+              </Button>
+            </Card>
+
+            {/* Build Confidence Card */}
+            <Card className="bg-yellow-200 rounded-3xl p-8 shadow-sm relative overflow-hidden">
+              <h3 className="text-xl font-medium mb-2">Build</h3>
+              <p className="text-lg">Confidence</p>
+              <div className="absolute bottom-4 left-8">
+                <div className="w-16 h-16 relative">
+                  <div className="absolute inset-0 border-2 border-black rounded-full"></div>
+                  <div className="absolute top-2 left-4 w-8 h-4 border-t-2 border-black rounded-full"></div>
+                  <div className="absolute top-6 left-6 w-2 h-2 bg-black rounded-full"></div>
+                  <div className="absolute top-8 left-4 w-6 h-2 border-b-2 border-black rounded-full"></div>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute bottom-6 right-6 p-2 hover:bg-yellow-300/50"
+              >
+                <ArrowUp className="w-4 h-4 rotate-45" />
+              </Button>
+            </Card>
+
+            {/* Diversity Card */}
+            <Card className="bg-teal-200 rounded-3xl p-8 shadow-sm relative overflow-hidden">
+              <h3 className="text-xl font-medium mb-2">Diversity</h3>
+              <p className="text-lg">&amp; Inclusion</p>
+              <div className="absolute bottom-4 left-8">
+                <div className="w-16 h-16 relative">
+                  <div className="absolute inset-0 border-2 border-black rounded-full"></div>
+                  <div className="absolute top-4 left-4 w-8 h-8 border-2 border-black rounded-full"></div>
+                  <div className="absolute top-6 left-6 w-2 h-2 bg-black rounded-full"></div>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute bottom-6 right-6 p-2 hover:bg-teal-300/50"
+              >
+                <ArrowUp className="w-4 h-4 rotate-45" />
+              </Button>
+            </Card>
+
+            {/* Behavioral Activation Card */}
+            <Card className="bg-gray-200 rounded-3xl p-8 shadow-sm relative overflow-hidden">
+              <h3 className="text-xl font-medium mb-2">Behavioral</h3>
+              <p className="text-lg">Activation</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute bottom-6 right-6 p-2 hover:bg-gray-300/50"
+              >
+                <ArrowUp className="w-4 h-4 rotate-45" />
+              </Button>
+            </Card>
           </div>
+
+          {/* Satisfaction Chart Card */}
+          <Card className="bg-white rounded-3xl p-8 shadow-sm">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-xl font-medium mb-1">Satisfaction</h2>
+                <p className="text-sm text-gray-500">Based on daily mood log</p>
+              </div>
+              <div className="flex gap-4 text-sm">
+                <span className="font-medium">W</span>
+                <span className="text-gray-400">M</span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {satisfactionData.map((item, index) => (
+                <div key={index} className="flex items-center gap-4">
+                  <div 
+                    className={`w-12 h-16 rounded-full ${item.color} flex items-end justify-center text-white text-xs font-medium pb-2`}
+                    style={{ height: `${Math.max(item.percentage * 0.8, 20)}px` }}
+                  >
+                    {item.percentage}%
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-4 mt-6 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                <span>Happiness</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span>Calmness</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                <span>Anger</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span>Excitement</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                <span>Sadness</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
+                <span>Stress</span>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
-
-      {/* Hidden file input for material */}
-      <input
-        ref={materialFileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleMaterialImageUpload}
-        className="hidden"
-      />
     </div>
   );
 };
