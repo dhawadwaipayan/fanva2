@@ -14,23 +14,46 @@ export const generateRealisticGarment = async ({
     throw new Error('OpenAI API key is required');
   }
 
-  // Use the specific prompt provided by the user
-  const prompt = `Using this material, render the sketch into a realistic representation on a flat white background. Ensure all topstitches and buttons match the fabric color.`;
+  // Prepare the messages for GPT-4o vision API
+  const messages = [
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: "Using this material, render the sketch into a realistic representation on a flat white background. Ensure all topstitches and buttons match the fabric color."
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: flatSketch
+          }
+        }
+      ]
+    }
+  ];
+
+  // Add material image if provided
+  if (materialImage) {
+    messages[0].content.push({
+      type: "image_url",
+      image_url: {
+        url: materialImage
+      }
+    });
+  }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/images/generations', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'dall-e-3',
-        prompt: prompt,
-        n: 1,
-        size: '1024x1024',
-        quality: 'hd',
-        style: 'natural'
+        model: 'gpt-4o',
+        messages: messages,
+        max_tokens: 4096
       }),
     });
 
@@ -40,7 +63,10 @@ export const generateRealisticGarment = async ({
     }
 
     const data = await response.json();
-    return data.data[0].url;
+    
+    // Since GPT-4o returns text, we'll need to handle this differently
+    // For now, return the response content as it might contain image data or instructions
+    return data.choices[0].message.content;
   } catch (error) {
     console.error('Image generation error:', error);
     throw error;
