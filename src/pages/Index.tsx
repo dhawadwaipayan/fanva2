@@ -1,9 +1,9 @@
-
 import { useState } from 'react';
 import { Undo, Redo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
+import { SketchCanvas } from '@/components/SketchCanvas';
 
 const Index = () => {
   const [activeMode, setActiveMode] = useState<'sketch' | 'render'>('sketch');
@@ -85,26 +85,7 @@ const Index = () => {
           </div>
 
           {/* Canvas Area */}
-          <Card className="bg-gray-800 border-gray-700 h-[calc(100vh-200px)] flex items-center justify-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-800"></div>
-            
-            {/* Flat Sketch Element */}
-            <div className="relative z-10 bg-gray-300 w-64 h-64 rounded-lg flex items-center justify-center shadow-2xl transform hover:scale-105 transition-transform duration-300">
-              <span className="text-gray-600 font-semibold text-lg">Flat Sketch</span>
-            </div>
-
-            {/* Grid Pattern Overlay */}
-            <div 
-              className="absolute inset-0 opacity-10"
-              style={{
-                backgroundImage: `
-                  linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                  linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
-                `,
-                backgroundSize: '20px 20px'
-              }}
-            />
-          </Card>
+          <SketchCanvas className="h-[calc(100vh-200px)]" />
         </div>
 
         {/* Right Sidebar */}
