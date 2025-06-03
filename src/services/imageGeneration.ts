@@ -14,37 +14,15 @@ export const generateRealisticGarment = async ({
     throw new Error('OpenAI API key is required');
   }
 
-  // Prepare the messages for GPT Image 1 model
-  const messages = [
-    {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: "Using this material, render the sketch into a realistic representation on a flat white background. Ensure all topstitches and buttons match the fabric color."
-        },
-        {
-          type: "image_url",
-          image_url: {
-            url: flatSketch
-          }
-        }
-      ]
-    }
-  ];
-
-  // Add material image if provided
+  // Create a detailed prompt for the image generation
+  let prompt = `Create a realistic representation of this flat sketch garment on a flat white background. Ensure all topstitches and buttons are clearly visible and detailed.`;
+  
   if (materialImage) {
-    messages[0].content.push({
-      type: "image_url",
-      image_url: {
-        url: materialImage
-      }
-    });
+    prompt += ` Apply the provided material/fabric texture to the garment while maintaining the original design structure.`;
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -52,8 +30,10 @@ export const generateRealisticGarment = async ({
       },
       body: JSON.stringify({
         model: 'gpt-image-1',
-        messages: messages,
-        max_tokens: 4096
+        prompt: prompt,
+        n: 1,
+        size: '1024x1024',
+        response_format: 'b64_json'
       }),
     });
 
@@ -64,9 +44,11 @@ export const generateRealisticGarment = async ({
 
     const data = await response.json();
     
-    // Since GPT Image 1 returns text, we'll need to handle this differently
-    // For now, return the response content as it might contain image data or instructions
-    return data.choices[0].message.content;
+    // Extract base64 image data from the response
+    const imageBase64 = data.data[0].b64_json;
+    
+    // Return as data URL for display
+    return `data:image/png;base64,${imageBase64}`;
   } catch (error) {
     console.error('Image generation error:', error);
     throw error;
