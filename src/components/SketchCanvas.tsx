@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -7,11 +7,21 @@ import { toast } from '@/hooks/use-toast';
 
 interface SketchCanvasProps {
   className?: string;
+  onImageChange?: (image: string | null) => void;
+  generatedImage?: string | null;
 }
 
-export const SketchCanvas = ({ className }: SketchCanvasProps) => {
+export const SketchCanvas = ({ className, onImageChange, generatedImage }: SketchCanvasProps) => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Update the displayed image when a new one is generated
+  useEffect(() => {
+    if (generatedImage) {
+      setUploadedImage(generatedImage);
+      onImageChange?.(generatedImage);
+    }
+  }, [generatedImage, onImageChange]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -19,7 +29,9 @@ export const SketchCanvas = ({ className }: SketchCanvasProps) => {
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = (e) => {
-          setUploadedImage(e.target?.result as string);
+          const imageData = e.target?.result as string;
+          setUploadedImage(imageData);
+          onImageChange?.(imageData);
           toast({
             title: "Image uploaded",
             description: "Your flat sketch has been added to the canvas",
@@ -42,6 +54,7 @@ export const SketchCanvas = ({ className }: SketchCanvasProps) => {
 
   const handleRemoveImage = () => {
     setUploadedImage(null);
+    onImageChange?.(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }

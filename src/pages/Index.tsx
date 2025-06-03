@@ -1,15 +1,20 @@
-
 import { useState, useRef } from 'react';
-import { Undo, Redo, Upload, X } from 'lucide-react';
+import { Undo, Redo, Upload, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { SketchCanvas } from '@/components/SketchCanvas';
+import { GenerationSettings } from '@/components/GenerationSettings';
+import { generateRealisticGarment } from '@/services/imageGeneration';
 
 const Index = () => {
   const [activeMode, setActiveMode] = useState<'sketch' | 'render'>('sketch');
   const [activeSidebarTab, setActiveSidebarTab] = useState<'render' | 'colorways' | 'material'>('render');
   const [materialImage, setMaterialImage] = useState<string | null>(null);
+  const [sketchImage, setSketchImage] = useState<string | null>(null);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string>('');
+  const [isGenerating, setIsGenerating] = useState(false);
   const materialFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUndo = () => {
@@ -26,11 +31,55 @@ const Index = () => {
     });
   };
 
-  const handleGenerate = () => {
-    toast({
-      title: "Generate",
-      description: "Starting generation process...",
-    });
+  const handleGenerate = async () => {
+    if (!apiKey) {
+      toast({
+        title: "API Key Required",
+        description: "Please enter your OpenAI API key to generate images",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!sketchImage) {
+      toast({
+        title: "Sketch Required",
+        description: "Please upload a flat sketch first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    
+    try {
+      toast({
+        title: "Generation Started",
+        description: "AI is creating your realistic garment...",
+      });
+
+      const generatedUrl = await generateRealisticGarment({
+        flatSketch: sketchImage,
+        materialImage: materialImage || undefined,
+        apiKey: apiKey
+      });
+
+      setGeneratedImage(generatedUrl);
+      
+      toast({
+        title: "Generation Complete!",
+        description: "Your realistic garment has been generated",
+      });
+    } catch (error) {
+      console.error('Generation failed:', error);
+      toast({
+        title: "Generation Failed",
+        description: error instanceof Error ? error.message : "Failed to generate image",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleMaterialImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,7 +173,11 @@ const Index = () => {
             </Button>
           </div>
 
-          <SketchCanvas className="h-[calc(100vh-200px)]" />
+          <SketchCanvas 
+            className="h-[calc(100vh-200px)]" 
+            onImageChange={setSketchImage}
+            generatedImage={generatedImage}
+          />
         </div>
 
         {/* Right Sidebar */}
@@ -152,6 +205,12 @@ const Index = () => {
 
           {/* Sidebar Content */}
           <div className="flex-1 p-4 space-y-4">
+            {/* Generation Settings */}
+            <GenerationSettings 
+              apiKey={apiKey}
+              onApiKeyChange={setApiKey}
+            />
+
             {/* Add Material Section */}
             <Card className="bg-gray-700 border-gray-600 p-6">
               <div className="text-center">
@@ -216,9 +275,17 @@ const Index = () => {
               </Button>
               <Button 
                 onClick={handleGenerate}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={isGenerating}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
               >
-                Generate
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  'Generate'
+                )}
               </Button>
             </div>
           </div>
