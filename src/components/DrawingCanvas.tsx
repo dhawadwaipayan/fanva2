@@ -44,15 +44,57 @@ export const DrawingCanvas = ({
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Render text elements onto the canvas
+  const renderTextElements = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Render each text element onto the canvas
+    textElements.forEach(textElement => {
+      if (!textElement.isEditing && textElement.text.trim()) {
+        ctx.font = 'bold 18px Arial';
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        // Add white background for better visibility
+        const textMetrics = ctx.measureText(textElement.text);
+        const textWidth = textMetrics.width;
+        const textHeight = 24; // Approximate height for the font size
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.fillRect(
+          textElement.x - textWidth/2 - 4,
+          textElement.y - textHeight/2 - 2,
+          textWidth + 8,
+          textHeight + 4
+        );
+        
+        // Draw the text
+        ctx.fillStyle = '#000000';
+        ctx.fillText(textElement.text, textElement.x, textElement.y);
+      }
+    });
+  }, [textElements]);
+
   // Update canvas state and notify parent whenever canvas changes
   const updateCanvasState = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    // Get the complete canvas as image data (including annotations)
+    // Temporarily render text elements onto canvas for image capture
+    renderTextElements();
+    
+    // Get the complete canvas as image data (including annotations and text)
     const canvasImageData = canvas.toDataURL();
     onImageChange?.(canvasImageData);
-  }, [onImageChange]);
+    
+    // Redraw without text overlay to maintain editing capability
+    redrawCanvas();
+  }, [onImageChange, renderTextElements]);
 
   // Update the displayed image when a new one is generated
   useEffect(() => {
@@ -245,8 +287,19 @@ export const DrawingCanvas = ({
     setUploadedImage(null);
     backgroundImageRef.current = null;
     setTextElements([]);
+    setHistory([]);
+    setHistoryIndex(-1);
+    
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+    
     onImageChange?.(null);
-    redrawCanvas();
+    
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -444,20 +497,19 @@ export const DrawingCanvas = ({
                 onMouseLeave={handleMouseUp}
               />
               
-              {/* Text elements overlay */}
+              {/* Text elements overlay for editing only */}
               {textElements.map((textElement) => (
-                <div
-                  key={textElement.id}
-                  className="absolute"
-                  style={{
-                    left: textElement.x,
-                    top: textElement.y,
-                    transform: 'translate(-50%, -50%)',
-                    minWidth: '100px'
-                  }}
-                  onDoubleClick={() => handleTextDoubleClick(textElement.id)}
-                >
-                  {textElement.isEditing ? (
+                textElement.isEditing && (
+                  <div
+                    key={textElement.id}
+                    className="absolute"
+                    style={{
+                      left: textElement.x,
+                      top: textElement.y,
+                      transform: 'translate(-50%, -50%)',
+                      minWidth: '100px'
+                    }}
+                  >
                     <input
                       type="text"
                       value={textElement.text}
@@ -471,14 +523,29 @@ export const DrawingCanvas = ({
                       className="bg-white border-2 border-blue-500 outline-none text-black font-bold text-lg px-2 py-1 rounded text-center min-w-[80px]"
                       autoFocus
                     />
-                  ) : (
-                    <div 
-                      className="bg-white/90 border border-gray-300 text-black font-bold text-lg px-2 py-1 rounded cursor-pointer hover:bg-white transition-all text-center"
-                    >
+                  </div>
+                )
+              ))}
+
+              {/* Non-editing text elements for interaction */}
+              {textElements.map((textElement) => (
+                !textElement.isEditing && textElement.text.trim() && (
+                  <div
+                    key={`${textElement.id}-display`}
+                    className="absolute cursor-pointer"
+                    style={{
+                      left: textElement.x,
+                      top: textElement.y,
+                      transform: 'translate(-50%, -50%)',
+                      minWidth: '100px'
+                    }}
+                    onDoubleClick={() => handleTextDoubleClick(textElement.id)}
+                  >
+                    <div className="bg-white/90 border border-gray-300 text-black font-bold text-lg px-2 py-1 rounded hover:bg-white transition-all text-center">
                       {textElement.text}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )
               ))}
 
               <Button
