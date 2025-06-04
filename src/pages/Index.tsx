@@ -1,4 +1,5 @@
 
+
 import { useState, useRef } from 'react';
 import { Undo, Redo, Upload, X, Loader2, Search, Download, ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,9 +14,11 @@ const Index = () => {
   const [activeMode, setActiveMode] = useState<'sketch' | 'render'>('sketch');
   const [activeSidebarTab, setActiveSidebarTab] = useState<'render' | 'colorways' | 'material'>('render');
   const [sketchImage, setSketchImage] = useState<string | null>(null);
+  const [renderImage, setRenderImage] = useState<string | null>(null);
   const [annotatedSketchImage, setAnnotatedSketchImage] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [sketchGeneratedImage, setSketchGeneratedImage] = useState<string | null>(null);
+  const [hasTransferredToRender, setHasTransferredToRender] = useState(false);
   const [apiKey, setApiKey] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -77,6 +80,7 @@ const Index = () => {
       
       if (activeMode === 'sketch') {
         setSketchGeneratedImage(generatedUrl);
+        setHasTransferredToRender(false); // Reset transfer flag when new sketch is generated
       } else {
         setGeneratedImage(generatedUrl);
       }
@@ -156,15 +160,22 @@ const Index = () => {
 
   // Handle mode switching - transfer sketch generated image to render canvas
   const handleModeSwitch = (mode: 'sketch' | 'render') => {
-    if (mode === 'render' && activeMode === 'sketch' && sketchGeneratedImage) {
+    if (mode === 'render' && activeMode === 'sketch' && sketchGeneratedImage && !hasTransferredToRender) {
       // Transfer the generated sketch image to the render canvas
-      setSketchImage(sketchGeneratedImage);
+      setRenderImage(sketchGeneratedImage);
+      setHasTransferredToRender(true);
       toast({
         title: "Image transferred",
         description: "Your generated sketch has been moved to the render canvas"
       });
     }
     setActiveMode(mode);
+  };
+
+  // Handle render image removal
+  const handleRenderImageRemove = () => {
+    setRenderImage(null);
+    setGeneratedImage(null);
   };
 
   return (
@@ -338,8 +349,10 @@ const Index = () => {
             <div className="bg-gray-700 rounded-lg border border-gray-600 p-4">
               <SketchCanvas
                 className="h-[calc(100vh-280px)] rounded-lg bg-[#1B1B1B]"
-                onImageChange={setSketchImage}
+                onImageChange={setRenderImage}
+                onImageRemove={handleRenderImageRemove}
                 generatedImage={generatedImage}
+                uploadedImage={renderImage}
                 zoom={zoom}
                 isPanning={isPanning}
               />
@@ -408,3 +421,4 @@ const Index = () => {
 };
 
 export default Index;
+
