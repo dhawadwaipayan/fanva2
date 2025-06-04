@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, X, Type, Eraser, Pencil, Undo, Redo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,6 @@ import { toast } from '@/hooks/use-toast';
 interface DrawingCanvasProps {
   className?: string;
   onImageChange?: (image: string | null) => void;
-  onAnnotatedImageChange?: (annotatedImage: string | null) => void;
   activeDrawingTool: 'draw' | 'erase' | 'text';
   onToolChange: (tool: 'draw' | 'erase' | 'text') => void;
   generatedImage?: string | null;
@@ -29,7 +29,6 @@ interface HistoryState {
 export const DrawingCanvas = ({ 
   className, 
   onImageChange, 
-  onAnnotatedImageChange,
   activeDrawingTool,
   onToolChange,
   generatedImage
@@ -45,53 +44,20 @@ export const DrawingCanvas = ({
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Function to capture the complete canvas with annotations
-  const captureAnnotatedCanvas = useCallback(() => {
+  // Update canvas state and notify parent whenever canvas changes
+  const updateCanvasState = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return null;
-
-    // Create a temporary canvas to render everything together
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    if (!tempCtx) return null;
-
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-
-    // Draw the current canvas content (background image + drawings)
-    tempCtx.drawImage(canvas, 0, 0);
-
-    // Draw text elements on top
-    tempCtx.font = 'bold 18px Arial';
-    tempCtx.fillStyle = '#000000';
-    tempCtx.strokeStyle = '#ffffff';
-    tempCtx.lineWidth = 3;
-
-    textElements.forEach(textElement => {
-      if (!textElement.isEditing && textElement.text.trim()) {
-        const x = textElement.x;
-        const y = textElement.y;
-        
-        // Draw text outline for better visibility
-        tempCtx.strokeText(textElement.text, x, y);
-        tempCtx.fillText(textElement.text, x, y);
-      }
-    });
-
-    return tempCanvas.toDataURL();
-  }, [textElements]);
-
-  // Update annotated image whenever canvas or text changes
-  const updateAnnotatedImage = useCallback(() => {
-    const annotatedImageData = captureAnnotatedCanvas();
-    onAnnotatedImageChange?.(annotatedImageData);
-  }, [captureAnnotatedCanvas, onAnnotatedImageChange]);
+    if (!canvas) return;
+    
+    // Get the complete canvas as image data (including annotations)
+    const canvasImageData = canvas.toDataURL();
+    onImageChange?.(canvasImageData);
+  }, [onImageChange]);
 
   // Update the displayed image when a new one is generated
   useEffect(() => {
     if (generatedImage) {
       setUploadedImage(generatedImage);
-      onImageChange?.(generatedImage);
       
       // Create image element for canvas drawing
       const img = new Image();
@@ -101,12 +67,12 @@ export const DrawingCanvas = ({
         // Save state after image update
         setTimeout(() => {
           saveToHistory();
-          updateAnnotatedImage();
+          updateCanvasState();
         }, 100);
       };
       img.src = generatedImage;
     }
-  }, [generatedImage]);
+  }, [generatedImage, updateCanvasState]);
 
   const saveToHistory = useCallback(() => {
     const canvas = canvasRef.current;
@@ -128,10 +94,7 @@ export const DrawingCanvas = ({
     }
     
     setHistory(newHistory);
-    
-    // Update annotated image after saving to history
-    setTimeout(() => updateAnnotatedImage(), 50);
-  }, [history, historyIndex, textElements, updateAnnotatedImage]);
+  }, [history, historyIndex, textElements]);
 
   const handleUndo = () => {
     if (historyIndex > 0) {
@@ -149,7 +112,7 @@ export const DrawingCanvas = ({
           img.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0);
-            updateAnnotatedImage();
+            updateCanvasState();
           };
           img.src = prevState.canvasData;
         }
@@ -178,7 +141,7 @@ export const DrawingCanvas = ({
           img.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0);
-            updateAnnotatedImage();
+            updateCanvasState();
           };
           img.src = nextState.canvasData;
         }
@@ -231,10 +194,10 @@ export const DrawingCanvas = ({
         };
         setHistory([initialState]);
         setHistoryIndex(0);
-        updateAnnotatedImage();
+        updateCanvasState();
       }, 100);
     }
-  }, [uploadedImage, redrawCanvas, updateAnnotatedImage]);
+  }, [uploadedImage, redrawCanvas, updateCanvasState]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -244,7 +207,6 @@ export const DrawingCanvas = ({
         reader.onload = (e) => {
           const imageData = e.target?.result as string;
           setUploadedImage(imageData);
-          onImageChange?.(imageData);
           
           // Create image element for canvas drawing
           const img = new Image();
@@ -254,6 +216,7 @@ export const DrawingCanvas = ({
             // Save state after image upload
             setTimeout(() => {
               saveToHistory();
+              updateCanvasState();
             }, 100);
           };
           img.src = imageData;
@@ -279,33 +242,14 @@ export const DrawingCanvas = ({
   };
 
   const handleRemoveImage = () => {
-    // Clear all states
     setUploadedImage(null);
-    setTextElements([]);
-    setHistory([]);
-    setHistoryIndex(-1);
-    
-    // Clear background image reference
     backgroundImageRef.current = null;
-    
-    // Clear file input
+    setTextElements([]);
+    onImageChange?.(null);
+    redrawCanvas();
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    
-    // Clear canvas
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-    }
-    
-    // Notify parent component
-    onImageChange?.(null);
-    onAnnotatedImageChange?.(null);
-    
     toast({
       title: "Image removed",
       description: "The sketch has been removed from the canvas",
@@ -361,7 +305,10 @@ export const DrawingCanvas = ({
   const handleMouseUp = () => {
     if (isDrawing) {
       setIsDrawing(false);
-      setTimeout(() => saveToHistory(), 50);
+      setTimeout(() => {
+        saveToHistory();
+        updateCanvasState();
+      }, 50);
     }
   };
 
@@ -403,7 +350,10 @@ export const DrawingCanvas = ({
     setTextElements(prev => prev.map(text => 
       text.id === textId ? { ...text, isEditing: false } : text
     ));
-    setTimeout(() => saveToHistory(), 50);
+    setTimeout(() => {
+      saveToHistory();
+      updateCanvasState();
+    }, 50);
   };
 
   const handleTextDoubleClick = (textId: string) => {
