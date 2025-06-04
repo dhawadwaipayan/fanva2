@@ -18,7 +18,6 @@ interface TextElement {
   x: number;
   y: number;
   isEditing: boolean;
-  isDragging: boolean;
 }
 
 interface HistoryState {
@@ -56,7 +55,7 @@ export const DrawingCanvas = ({
       textElements: [...textElements]
     };
 
-    // Remove any history after current index (for when we're not at the end)
+    // Remove any history after current index
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newState);
     
@@ -244,39 +243,45 @@ export const DrawingCanvas = ({
   };
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (activeDrawingTool === 'text') {
-      const pos = getMousePos(e);
-      
-      // Check if clicking on existing text
-      const clickedText = textElements.find(text => {
-        const textRect = {
-          left: text.x - 50,
-          right: text.x + 50,
-          top: text.y - 15,
-          bottom: text.y + 15
-        };
-        return pos.x >= textRect.left && pos.x <= textRect.right && 
-               pos.y >= textRect.top && pos.y <= textRect.bottom;
-      });
+    if (activeDrawingTool !== 'text') return;
+    
+    const pos = getMousePos(e);
+    
+    // Check if clicking on existing text
+    const clickedText = textElements.find(text => {
+      const textRect = {
+        left: text.x - 50,
+        right: text.x + 100,
+        top: text.y - 20,
+        bottom: text.y + 20
+      };
+      return pos.x >= textRect.left && pos.x <= textRect.right && 
+             pos.y >= textRect.top && pos.y <= textRect.bottom;
+    });
 
-      if (clickedText) {
-        // Edit existing text
-        handleTextDoubleClick(clickedText.id);
-      } else {
-        // Create new text element
-        const newTextId = Date.now().toString();
-        const newText: TextElement = {
-          id: newTextId,
-          text: '',
-          x: pos.x,
-          y: pos.y,
-          isEditing: true,
-          isDragging: false
-        };
-        
-        setTextElements(prev => [...prev, newText]);
-        setEditingTextId(newTextId);
-      }
+    if (clickedText && !clickedText.isEditing) {
+      // Start editing existing text
+      setTextElements(prev => prev.map(text => 
+        text.id === clickedText.id ? { ...text, isEditing: true } : { ...text, isEditing: false }
+      ));
+      setEditingTextId(clickedText.id);
+    } else if (!clickedText) {
+      // Create new text element
+      const newTextId = Date.now().toString();
+      const newText: TextElement = {
+        id: newTextId,
+        text: '',
+        x: pos.x,
+        y: pos.y,
+        isEditing: true
+      };
+      
+      // Finish editing any existing text
+      setTextElements(prev => prev.map(text => ({ ...text, isEditing: false })));
+      
+      // Add new text element
+      setTextElements(prev => [...prev, newText]);
+      setEditingTextId(newTextId);
     }
   };
 
@@ -365,13 +370,6 @@ export const DrawingCanvas = ({
     }, 50);
   };
 
-  const handleTextDoubleClick = (textId: string) => {
-    setTextElements(prev => prev.map(text => 
-      text.id === textId ? { ...text, isEditing: true } : text
-    ));
-    setEditingTextId(textId);
-  };
-
   const handleTextMouseDown = (e: React.MouseEvent, textId: string) => {
     e.stopPropagation();
     const textElement = textElements.find(t => t.id === textId);
@@ -385,30 +383,6 @@ export const DrawingCanvas = ({
           y: e.clientY - rect.top - textElement.y
         });
       }
-    }
-  };
-
-  const handleTextMouseMove = (e: React.MouseEvent) => {
-    if (draggedTextId) {
-      const rect = containerRef.current?.getBoundingClientRect();
-      if (rect) {
-        const newX = e.clientX - rect.left - dragOffset.x;
-        const newY = e.clientY - rect.top - dragOffset.y;
-        
-        setTextElements(prev => prev.map(text => 
-          text.id === draggedTextId ? { ...text, x: newX, y: newY } : text
-        ));
-      }
-    }
-  };
-
-  const handleTextMouseUp = () => {
-    if (draggedTextId) {
-      setDraggedTextId(null);
-      // Save to history after moving text
-      setTimeout(() => {
-        saveToHistory();
-      }, 50);
     }
   };
 
@@ -529,14 +503,15 @@ export const DrawingCanvas = ({
         <div 
           ref={containerRef} 
           className="relative z-10 w-full h-full flex items-center justify-center p-8"
-          onMouseMove={handleTextMouseMove}
-          onMouseUp={handleTextMouseUp}
         >
           {uploadedImage ? (
             <div className="relative w-full h-full">
               <canvas
                 ref={canvasRef}
-                className="w-full h-full object-contain rounded-lg shadow-2xl bg-white cursor-crosshair"
+                className={`w-full h-full object-contain rounded-lg shadow-2xl bg-white ${
+                  activeDrawingTool === 'text' ? 'cursor-crosshair' : 
+                  activeDrawingTool === 'erase' ? 'cursor-cell' : 'cursor-crosshair'
+                }`}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
@@ -547,21 +522,15 @@ export const DrawingCanvas = ({
               {textElements.map((textElement) => (
                 <div
                   key={textElement.id}
-                  className="absolute text-black font-bold text-lg select-none"
+                  className="absolute select-none"
                   style={{
                     left: textElement.x,
-                    top: textElement.y - 20,
+                    top: textElement.y - 15,
                     transform: 'translate(-50%, -50%)',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    backgroundColor: textElement.isEditing ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255, 255, 255, 0.8)',
-                    border: textElement.isEditing ? '2px solid #3b82f6' : '1px solid rgba(0, 0, 0, 0.2)',
-                    cursor: textElement.isEditing ? 'text' : 'move',
-                    minWidth: '60px',
+                    minWidth: '100px',
                     textAlign: 'center'
                   }}
                   onMouseDown={(e) => handleTextMouseDown(e, textElement.id)}
-                  onDoubleClick={() => handleTextDoubleClick(textElement.id)}
                 >
                   {textElement.isEditing ? (
                     <input
@@ -574,12 +543,16 @@ export const DrawingCanvas = ({
                           handleTextFinishEditing(textElement.id);
                         }
                       }}
-                      className="bg-transparent border-none outline-none text-black font-bold text-lg w-full text-center"
+                      className="bg-white border-2 border-blue-500 outline-none text-black font-bold text-lg px-2 py-1 rounded text-center"
                       placeholder="Enter text"
                       autoFocus
                     />
                   ) : (
-                    <span>{textElement.text || 'Text'}</span>
+                    <div 
+                      className="bg-white/90 border border-gray-300 text-black font-bold text-lg px-2 py-1 rounded cursor-move hover:bg-white"
+                    >
+                      {textElement.text}
+                    </div>
                   )}
                 </div>
               ))}
