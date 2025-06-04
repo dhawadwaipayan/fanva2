@@ -373,7 +373,7 @@ const Index = () => {
             {/* Sidebar Tabs */}
             <div className="flex bg-gray-800 border-b border-gray-600">
               {[
-                { key: 'render', label: 'Render' },
+                { key: 'render', label: 'API' },
                 { key: 'colorways', label: 'Colorways' },
                 { key: 'material', label: 'Material' }
               ].map((tab) => (
