@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, X, Type, Eraser, Pencil, Undo, Redo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,11 +44,20 @@ export const DrawingCanvas = ({
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Update canvas state and notify parent whenever canvas changes
+  const updateCanvasState = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    // Get the complete canvas as image data (including annotations)
+    const canvasImageData = canvas.toDataURL();
+    onImageChange?.(canvasImageData);
+  }, [onImageChange]);
+
   // Update the displayed image when a new one is generated
   useEffect(() => {
     if (generatedImage) {
       setUploadedImage(generatedImage);
-      onImageChange?.(generatedImage);
       
       // Create image element for canvas drawing
       const img = new Image();
@@ -57,11 +67,12 @@ export const DrawingCanvas = ({
         // Save state after image update
         setTimeout(() => {
           saveToHistory();
+          updateCanvasState();
         }, 100);
       };
       img.src = generatedImage;
     }
-  }, [generatedImage, onImageChange]);
+  }, [generatedImage, updateCanvasState]);
 
   const saveToHistory = useCallback(() => {
     const canvas = canvasRef.current;
@@ -101,6 +112,7 @@ export const DrawingCanvas = ({
           img.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0);
+            updateCanvasState();
           };
           img.src = prevState.canvasData;
         }
@@ -129,6 +141,7 @@ export const DrawingCanvas = ({
           img.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0);
+            updateCanvasState();
           };
           img.src = nextState.canvasData;
         }
@@ -181,9 +194,10 @@ export const DrawingCanvas = ({
         };
         setHistory([initialState]);
         setHistoryIndex(0);
+        updateCanvasState();
       }, 100);
     }
-  }, [uploadedImage, redrawCanvas]);
+  }, [uploadedImage, redrawCanvas, updateCanvasState]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -193,7 +207,6 @@ export const DrawingCanvas = ({
         reader.onload = (e) => {
           const imageData = e.target?.result as string;
           setUploadedImage(imageData);
-          onImageChange?.(imageData);
           
           // Create image element for canvas drawing
           const img = new Image();
@@ -203,6 +216,7 @@ export const DrawingCanvas = ({
             // Save state after image upload
             setTimeout(() => {
               saveToHistory();
+              updateCanvasState();
             }, 100);
           };
           img.src = imageData;
@@ -291,7 +305,10 @@ export const DrawingCanvas = ({
   const handleMouseUp = () => {
     if (isDrawing) {
       setIsDrawing(false);
-      setTimeout(() => saveToHistory(), 50);
+      setTimeout(() => {
+        saveToHistory();
+        updateCanvasState();
+      }, 50);
     }
   };
 
@@ -333,7 +350,10 @@ export const DrawingCanvas = ({
     setTextElements(prev => prev.map(text => 
       text.id === textId ? { ...text, isEditing: false } : text
     ));
-    setTimeout(() => saveToHistory(), 50);
+    setTimeout(() => {
+      saveToHistory();
+      updateCanvasState();
+    }, 50);
   };
 
   const handleTextDoubleClick = (textId: string) => {
