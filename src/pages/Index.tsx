@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { Undo, Redo, Upload, X, Loader2, Search, Download, ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -51,13 +52,20 @@ const Index = () => {
       return;
     }
 
-    // Use annotated image if available, otherwise use the original sketch
-    const imageToUse = annotatedSketchImage || sketchImage;
+    let imageToUse: string | null = null;
+    
+    if (activeMode === 'sketch') {
+      // Use annotated image if available, otherwise use the original sketch
+      imageToUse = annotatedSketchImage || sketchImage;
+    } else {
+      // In render mode, use the render image (could be transferred from sketch or uploaded)
+      imageToUse = renderImage;
+    }
     
     if (!imageToUse) {
       toast({
-        title: "Sketch Required",
-        description: "Please upload a flat sketch first",
+        title: "Image Required",
+        description: activeMode === 'sketch' ? "Please upload a flat sketch first" : "Please upload an image or transfer from sketch mode",
         variant: "destructive"
       });
       return;
@@ -69,11 +77,12 @@ const Index = () => {
         title: "Generation Started",
         description: activeMode === 'sketch' 
           ? "AI is redoing your flat sketch with annotations..." 
-          : "AI is creating your realistic garment with annotations..."
+          : "AI is creating your realistic garment..."
       });
       
       const generatedUrl = await generateRealisticGarment({
-        flatSketch: imageToUse, // This now includes all annotations and drawings
+        flatSketch: imageToUse,
+        materialImage: activeMode === 'render' ? materialTexture : undefined, // Only use material in render mode
         apiKey: apiKey,
         isSketchMode: activeMode === 'sketch'
       });
@@ -89,7 +98,7 @@ const Index = () => {
         title: "Generation Complete!",
         description: activeMode === 'sketch' 
           ? "Your flat sketch with annotations has been redone" 
-          : "Your realistic garment with annotations has been generated"
+          : "Your realistic garment has been generated"
       });
     } catch (error) {
       console.error('Generation failed:', error);
