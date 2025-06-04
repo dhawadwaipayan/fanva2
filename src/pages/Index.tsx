@@ -12,7 +12,6 @@ import { generateRealisticGarment } from '@/services/imageGeneration';
 const Index = () => {
   const [activeMode, setActiveMode] = useState<'sketch' | 'render'>('sketch');
   const [activeSidebarTab, setActiveSidebarTab] = useState<'render' | 'colorways' | 'material'>('render');
-  const [materialImage, setMaterialImage] = useState<string | null>(null);
   const [sketchImage, setSketchImage] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState<string>('');
@@ -22,8 +21,6 @@ const Index = () => {
   
   // Sketch mode states
   const [activeDrawingTool, setActiveDrawingTool] = useState<'draw' | 'erase' | 'text'>('draw');
-  
-  const materialFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUndo = () => {
     toast({
@@ -64,7 +61,6 @@ const Index = () => {
       });
       const generatedUrl = await generateRealisticGarment({
         flatSketch: sketchImage,
-        materialImage: materialImage || undefined,
         apiKey: apiKey
       });
       setGeneratedImage(generatedUrl);
@@ -115,44 +111,6 @@ const Index = () => {
 
   const handleTogglePan = () => {
     setIsPanning(prev => !prev);
-  };
-
-  const handleMaterialImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = e => {
-          setMaterialImage(e.target?.result as string);
-          toast({
-            title: "Material image uploaded",
-            description: "Reference material has been added"
-          });
-        };
-        reader.readAsDataURL(file);
-      } else {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload an image file",
-          variant: "destructive"
-        });
-      }
-    }
-  };
-
-  const handleMaterialUploadClick = () => {
-    materialFileInputRef.current?.click();
-  };
-
-  const handleRemoveMaterialImage = () => {
-    setMaterialImage(null);
-    if (materialFileInputRef.current) {
-      materialFileInputRef.current.value = '';
-    }
-    toast({
-      title: "Material image removed",
-      description: "The material reference has been removed"
-    });
   };
 
   const handleSketchUploadClick = () => {
@@ -273,52 +231,6 @@ const Index = () => {
             <div className="flex-1 p-6 space-y-6 overflow-y-auto">
               {/* Generation Settings */}
               <GenerationSettings apiKey={apiKey} onApiKeyChange={setApiKey} />
-
-              {/* Add Material Section */}
-              <Card className="bg-gray-600 border-gray-500 p-6">
-                <div className="text-center">
-                  {materialImage ? (
-                    <div className="relative">
-                      <img
-                        src={materialImage}
-                        alt="Material reference"
-                        className="w-16 h-16 object-cover rounded-lg mx-auto mb-4"
-                      />
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleRemoveMaterialImage}
-                        className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full bg-red-600 hover:bg-red-700"
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div
-                      className="w-16 h-16 bg-gray-500 rounded-lg mx-auto mb-4 flex items-center justify-center cursor-pointer hover:bg-gray-400 transition-colors border border-gray-400"
-                      onClick={handleMaterialUploadClick}
-                    >
-                      <Upload className="w-6 h-6 text-gray-300" />
-                    </div>
-                  )}
-                  <h3 className="text-lg font-semibold text-gray-200 mb-2">Add Material</h3>
-                  <p className="text-gray-400 text-sm mb-4">
-                    {materialImage
-                      ? 'Material reference added'
-                      : 'Click to add material reference image'}
-                  </p>
-                  {!materialImage && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={handleMaterialUploadClick}
-                      className="bg-gray-500 hover:bg-gray-400 text-gray-200 border-gray-400"
-                    >
-                      Upload Image
-                    </Button>
-                  )}
-                </div>
-              </Card>
             </div>
           </div>
         </div>
@@ -427,52 +339,6 @@ const Index = () => {
             <div className="flex-1 p-6 space-y-6 overflow-y-auto">
               {/* Generation Settings */}
               <GenerationSettings apiKey={apiKey} onApiKeyChange={setApiKey} />
-
-              {/* Add Material Section */}
-              <Card className="bg-gray-600 border-gray-500 p-6">
-                <div className="text-center">
-                  {materialImage ? (
-                    <div className="relative">
-                      <img
-                        src={materialImage}
-                        alt="Material reference"
-                        className="w-16 h-16 object-cover rounded-lg mx-auto mb-4"
-                      />
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleRemoveMaterialImage}
-                        className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full bg-red-600 hover:bg-red-700"
-                      >
-                        <X className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div
-                      className="w-16 h-16 bg-gray-500 rounded-lg mx-auto mb-4 flex items-center justify-center cursor-pointer hover:bg-gray-400 transition-colors border border-gray-400"
-                      onClick={handleMaterialUploadClick}
-                    >
-                      <Upload className="w-6 h-6 text-gray-300" />
-                    </div>
-                  )}
-                  <h3 className="text-lg font-semibold text-gray-200 mb-2">Add Material</h3>
-                  <p className="text-gray-400 text-sm mb-4">
-                    {materialImage
-                      ? 'Material reference added'
-                      : 'Click to add material reference image'}
-                  </p>
-                  {!materialImage && (
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={handleMaterialUploadClick}
-                      className="bg-gray-500 hover:bg-gray-400 text-gray-200 border-gray-400"
-                    >
-                      Upload Image
-                    </Button>
-                  )}
-                </div>
-              </Card>
             </div>
 
             {/* Bottom Controls */}
@@ -503,15 +369,6 @@ const Index = () => {
           </div>
         </div>
       )}
-
-      {/* Hidden file input for material */}
-      <input
-        ref={materialFileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleMaterialImageUpload}
-        className="hidden"
-      />
     </div>
   );
 };
