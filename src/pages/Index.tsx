@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { Undo, Redo, Upload, X, Loader2, Search, Download, ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -222,7 +223,7 @@ const Index = () => {
       {activeMode === 'sketch' ? (
         /* Sketch Mode Layout */
         <div className="flex flex-1 gap-6 px-6 pb-6">
-          {/* Center Canvas Area - Full width without left sidebar */}
+          {/* Center Canvas Area */}
           <div className="flex-1 flex flex-col">
             <div className="bg-gray-700 rounded-lg border border-gray-600 p-4 flex-1">
               <DrawingCanvas
@@ -263,6 +264,61 @@ const Index = () => {
                   'Generate'
                 )}
               </Button>
+            </div>
+          </div>
+
+          {/* Right Sidebar for Sketch Mode */}
+          <div className="w-80 bg-gray-700 border border-gray-600 rounded-lg flex flex-col overflow-hidden">
+            {/* Sidebar Content */}
+            <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+              {/* Generation Settings */}
+              <GenerationSettings apiKey={apiKey} onApiKeyChange={setApiKey} />
+
+              {/* Add Material Section */}
+              <Card className="bg-gray-600 border-gray-500 p-6">
+                <div className="text-center">
+                  {materialImage ? (
+                    <div className="relative">
+                      <img
+                        src={materialImage}
+                        alt="Material reference"
+                        className="w-16 h-16 object-cover rounded-lg mx-auto mb-4"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleRemoveMaterialImage}
+                        className="absolute -top-2 -right-2 w-6 h-6 p-0 rounded-full bg-red-600 hover:bg-red-700"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      className="w-16 h-16 bg-gray-500 rounded-lg mx-auto mb-4 flex items-center justify-center cursor-pointer hover:bg-gray-400 transition-colors border border-gray-400"
+                      onClick={handleMaterialUploadClick}
+                    >
+                      <Upload className="w-6 h-6 text-gray-300" />
+                    </div>
+                  )}
+                  <h3 className="text-lg font-semibold text-gray-200 mb-2">Add Material</h3>
+                  <p className="text-gray-400 text-sm mb-4">
+                    {materialImage
+                      ? 'Material reference added'
+                      : 'Click to add material reference image'}
+                  </p>
+                  {!materialImage && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleMaterialUploadClick}
+                      className="bg-gray-500 hover:bg-gray-400 text-gray-200 border-gray-400"
+                    >
+                      Upload Image
+                    </Button>
+                  )}
+                </div>
+              </Card>
             </div>
           </div>
         </div>
