@@ -1,3 +1,4 @@
+
 interface GenerationRequest {
   flatSketch: string;
   materialImage?: string;
@@ -100,6 +101,12 @@ export const generateRealisticGarment = async ({
 
       if (!response.ok) {
         const error = await response.json();
+        
+        // Handle specific quota error
+        if (error.error?.code === 'insufficient_quota') {
+          throw new Error('You have exceeded your OpenAI API quota. Please check your plan and billing details at https://platform.openai.com/account/billing');
+        }
+        
         throw new Error(error.error?.message || 'Failed to generate image with GPT-4.1');
       }
 
@@ -142,6 +149,14 @@ export const generateRealisticGarment = async ({
               try {
                 const parsed = JSON.parse(data);
                 console.log('Parsed streaming data:', parsed);
+                
+                // Check for error in streaming response
+                if (parsed.error) {
+                  if (parsed.error.code === 'insufficient_quota') {
+                    throw new Error('You have exceeded your OpenAI API quota. Please check your plan and billing details at https://platform.openai.com/account/billing');
+                  }
+                  throw new Error(parsed.error.message || 'Error in streaming response');
+                }
                 
                 // Look for partial image in streaming response
                 if (parsed.type === 'response.image_generation_call.partial_image' && parsed.partial_image_b64) {
@@ -214,7 +229,7 @@ export const generateRealisticGarment = async ({
       const resultImageUrl = finalImageUrl || lastPartialImageUrl;
       
       if (!resultImageUrl) {
-        throw new Error('No image found in streaming response');
+        throw new Error('No image found in streaming response. This may be due to API quota limits or service issues.');
       }
 
       return resultImageUrl;
@@ -231,6 +246,12 @@ export const generateRealisticGarment = async ({
 
       if (!response.ok) {
         const error = await response.json();
+        
+        // Handle specific quota error
+        if (error.error?.code === 'insufficient_quota') {
+          throw new Error('You have exceeded your OpenAI API quota. Please check your plan and billing details at https://platform.openai.com/account/billing');
+        }
+        
         throw new Error(error.error?.message || 'Failed to generate image with GPT-4.1');
       }
 
