@@ -283,57 +283,59 @@ export const DrawingCanvas = ({
   };
 
   const handleRemoveImage = () => {
-    // Clear all states
+    console.log('Remove image clicked');
+    
+    // Clear all states first
     setUploadedImage(null);
     backgroundImageRef.current = null;
     setTextElements([]);
-    setHistory([]);
-    setHistoryIndex(-1);
+    
+    console.log('States cleared');
     
     // Clear the canvas completely
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        // Save current dimensions
-        const width = canvas.width;
-        const height = canvas.height;
-        
-        // Clear everything
-        ctx.clearRect(0, 0, width, height);
+        console.log('Clearing canvas');
+        // Clear everything and reset canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.globalCompositeOperation = 'source-over';
         
-        // Reset canvas size to force complete reset
+        // Force canvas reset
+        const width = canvas.width;
+        const height = canvas.height;
+        canvas.width = 0;
+        canvas.height = 0;
         canvas.width = width;
         canvas.height = height;
+        
+        console.log('Canvas cleared and reset');
       }
     }
     
     // Clear file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
+      console.log('File input cleared');
     }
     
-    // Notify parent component immediately
+    // Clear history and reset index
+    setHistory([]);
+    setHistoryIndex(-1);
+    console.log('History cleared');
+    
+    // Notify parent component immediately with null
+    console.log('Notifying parent with null');
     onImageChange?.(null);
     
-    // Initialize empty history state
-    setTimeout(() => {
-      if (canvas) {
-        const canvasData = canvas.toDataURL();
-        const initialState: HistoryState = {
-          canvasData,
-          textElements: []
-        };
-        setHistory([initialState]);
-        setHistoryIndex(0);
-      }
-    }, 100);
-    
+    // Show success toast
     toast({
       title: "Image removed",
       description: "The sketch has been removed from the canvas",
     });
+    
+    console.log('Remove image completed');
   };
 
   const getMousePos = (e: React.MouseEvent<HTMLCanvasElement>) => {
