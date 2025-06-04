@@ -222,65 +222,7 @@ const Index = () => {
       {activeMode === 'sketch' ? (
         /* Sketch Mode Layout */
         <div className="flex flex-1 gap-6 px-6 pb-6">
-          {/* Left Drawing Tools */}
-          <div className="w-48 flex flex-col gap-3">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleUndo}
-              className="bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600 justify-start"
-            >
-              <Undo className="w-4 h-4 mr-2" />
-              Undo
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleRedo}
-              className="bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600 justify-start"
-            >
-              <Redo className="w-4 h-4 mr-2" />
-              Redo
-            </Button>
-            
-            <div className="mt-4 space-y-2">
-              <Button
-                variant={activeDrawingTool === 'draw' ? 'default' : 'secondary'}
-                onClick={() => setActiveDrawingTool('draw')}
-                className={`w-full justify-start ${
-                  activeDrawingTool === 'draw'
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600'
-                }`}
-              >
-                Draw
-              </Button>
-              <Button
-                variant={activeDrawingTool === 'erase' ? 'default' : 'secondary'}
-                onClick={() => setActiveDrawingTool('erase')}
-                className={`w-full justify-start ${
-                  activeDrawingTool === 'erase'
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600'
-                }`}
-              >
-                Erase
-              </Button>
-              <Button
-                variant={activeDrawingTool === 'text' ? 'default' : 'secondary'}
-                onClick={() => setActiveDrawingTool('text')}
-                className={`w-full justify-start ${
-                  activeDrawingTool === 'text'
-                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                    : 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600'
-                }`}
-              >
-                Text
-              </Button>
-            </div>
-          </div>
-
-          {/* Center Canvas Area */}
+          {/* Center Canvas Area - Full width without left sidebar */}
           <div className="flex-1 flex flex-col">
             <div className="bg-gray-700 rounded-lg border border-gray-600 p-4 flex-1">
               <DrawingCanvas

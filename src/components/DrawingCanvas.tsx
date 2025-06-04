@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, X, Type, Eraser, Pencil, Undo, Redo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,7 +16,7 @@ interface TextElement {
   text: string;
   x: number;
   y: number;
-  isDragging: boolean;
+  isEditing: boolean;
 }
 
 interface HistoryState {
@@ -34,24 +33,14 @@ export const DrawingCanvas = ({
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [textElements, setTextElements] = useState<TextElement[]>([]);
-  const [selectedText, setSelectedText] = useState<string | null>(null);
-  const [showTextInput, setShowTextInput] = useState(false);
-  const [newTextPosition, setNewTextPosition] = useState({ x: 0, y: 0 });
-  const [inputText, setInputText] = useState('');
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryState[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const textInputRef = useRef<HTMLInputElement>(null);
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (showTextInput && textInputRef.current) {
-      textInputRef.current.focus();
-    }
-  }, [showTextInput]);
 
   const saveToHistory = useCallback(() => {
     const canvas = canvasRef.current;
@@ -239,47 +228,28 @@ export const DrawingCanvas = ({
     };
   };
 
-  const getTextClickPos = (e: React.MouseEvent<HTMLDivElement>) => {
-    const container = containerRef.current;
-    if (!container) return { x: 0, y: 0 };
-    
-    const rect = container.getBoundingClientRect();
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    };
-  };
-
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (activeDrawingTool === 'text') {
       const pos = getMousePos(e);
-      setNewTextPosition(pos);
-      setShowTextInput(true);
-      setInputText('');
-      return;
+      
+      // Create new text element
+      const newTextId = Date.now().toString();
+      const newText: TextElement = {
+        id: newTextId,
+        text: 'New Text',
+        x: pos.x,
+        y: pos.y,
+        isEditing: true
+      };
+      
+      setTextElements(prev => [...prev, newText]);
+      setEditingTextId(newTextId);
+      
+      // Save to history after adding text
+      setTimeout(() => {
+        saveToHistory();
+      }, 50);
     }
-
-    const pos = getMousePos(e);
-    
-    // Check if clicking on existing text
-    const clickedText = textElements.find(text => {
-      const textWidth = text.text.length * 12; // Approximate text width
-      return pos.x >= text.x - 50 && pos.x <= text.x + textWidth + 50 && 
-             pos.y >= text.y - 25 && pos.y <= text.y + 10;
-    });
-
-    if (clickedText) {
-      setSelectedText(clickedText.id);
-      setTextElements(prev => prev.map(text => 
-        text.id === clickedText.id 
-          ? { ...text, isDragging: true }
-          : { ...text, isDragging: false }
-      ));
-      return;
-    }
-
-    setSelectedText(null);
-    setTextElements(prev => prev.map(text => ({ ...text, isDragging: false })));
   };
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -295,21 +265,6 @@ export const DrawingCanvas = ({
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const pos = getMousePos(e);
-
-    // Handle text dragging
-    if (selectedText) {
-      const draggingText = textElements.find(text => text.id === selectedText && text.isDragging);
-      if (draggingText) {
-        setTextElements(prev => prev.map(text => 
-          text.id === selectedText 
-            ? { ...text, x: pos.x, y: pos.y }
-            : text
-        ));
-        return;
-      }
-    }
-
     if (isDrawing && (activeDrawingTool === 'draw' || activeDrawingTool === 'erase')) {
       draw(e);
     }
@@ -323,7 +278,6 @@ export const DrawingCanvas = ({
         saveToHistory();
       }, 50);
     }
-    setTextElements(prev => prev.map(text => ({ ...text, isDragging: false })));
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -354,57 +308,42 @@ export const DrawingCanvas = ({
     }
   };
 
-  const handleTextSubmit = () => {
-    if (inputText.trim()) {
-      const newText: TextElement = {
-        id: Date.now().toString(),
-        text: inputText.trim(),
-        x: newTextPosition.x,
-        y: newTextPosition.y,
-        isDragging: false
-      };
-      setTextElements(prev => [...prev, newText]);
-      // Save to history after adding text
-      setTimeout(() => {
-        saveToHistory();
-      }, 50);
-    }
-    setShowTextInput(false);
-    setInputText('');
+  const handleTextChange = (textId: string, newText: string) => {
+    setTextElements(prev => prev.map(text => 
+      text.id === textId ? { ...text, text: newText } : text
+    ));
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleTextSubmit();
-    } else if (e.key === 'Escape') {
-      setShowTextInput(false);
-      setInputText('');
-    }
+  const handleTextFinishEditing = (textId: string) => {
+    setTextElements(prev => prev.map(text => 
+      text.id === textId ? { ...text, isEditing: false } : text
+    ));
+    setEditingTextId(null);
+    
+    // Save to history after editing text
+    setTimeout(() => {
+      saveToHistory();
+    }, 50);
   };
 
-  const deleteSelectedText = () => {
-    if (selectedText) {
-      setTextElements(prev => prev.filter(text => text.id !== selectedText));
-      setSelectedText(null);
-      // Save to history after deleting text
-      setTimeout(() => {
-        saveToHistory();
-      }, 50);
-    }
+  const handleTextDoubleClick = (textId: string) => {
+    setTextElements(prev => prev.map(text => 
+      text.id === textId ? { ...text, isEditing: true } : text
+    ));
+    setEditingTextId(textId);
   };
 
+  // Handle clicks outside to deselect text
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedText && !showTextInput) {
-          deleteSelectedText();
-        }
+    const handleClickOutside = (e: MouseEvent) => {
+      if (editingTextId && containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        handleTextFinishEditing(editingTextId);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedText, showTextInput]);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [editingTextId]);
 
   return (
     <div className="flex flex-col gap-4 h-full">
@@ -482,55 +421,43 @@ export const DrawingCanvas = ({
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
-                onClick={activeDrawingTool === 'text' ? handleCanvasClick : undefined}
               />
               
               {/* Text elements overlay */}
               {textElements.map((textElement) => (
                 <div
                   key={textElement.id}
-                  className={`absolute text-black font-bold text-lg cursor-move select-none ${
-                    selectedText === textElement.id ? 'ring-2 ring-blue-500 bg-blue-50' : ''
-                  }`}
+                  className="absolute text-black font-bold text-lg select-none"
                   style={{
                     left: textElement.x,
                     top: textElement.y - 20,
                     transform: 'translate(-50%, -50%)',
                     padding: '2px 4px',
-                    borderRadius: '2px'
+                    borderRadius: '2px',
+                    backgroundColor: textElement.isEditing ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                    border: textElement.isEditing ? '2px solid #3b82f6' : '2px solid transparent'
                   }}
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                    setSelectedText(textElement.id);
-                    setTextElements(prev => prev.map(text => 
-                      text.id === textElement.id 
-                        ? { ...text, isDragging: true }
-                        : { ...text, isDragging: false }
-                    ));
-                  }}
+                  onDoubleClick={() => handleTextDoubleClick(textElement.id)}
                 >
-                  {textElement.text}
+                  {textElement.isEditing ? (
+                    <input
+                      type="text"
+                      value={textElement.text}
+                      onChange={(e) => handleTextChange(textElement.id, e.target.value)}
+                      onBlur={() => handleTextFinishEditing(textElement.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleTextFinishEditing(textElement.id);
+                        }
+                      }}
+                      className="bg-transparent border-none outline-none text-black font-bold text-lg"
+                      autoFocus
+                    />
+                  ) : (
+                    <span>{textElement.text}</span>
+                  )}
                 </div>
               ))}
-
-              {/* Text input overlay */}
-              {showTextInput && (
-                <input
-                  ref={textInputRef}
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  onBlur={handleTextSubmit}
-                  className="absolute bg-white border-2 border-blue-500 px-2 py-1 text-black font-bold text-lg rounded z-50"
-                  style={{
-                    left: newTextPosition.x,
-                    top: newTextPosition.y - 20,
-                    transform: 'translate(-50%, -50%)'
-                  }}
-                  placeholder="Enter text..."
-                />
-              )}
 
               <Button
                 variant="destructive"
