@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, X, Type, Eraser, Pencil, Undo, Redo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -314,29 +313,6 @@ export const DrawingCanvas = ({
       description: "The sketch has been removed from the canvas",
     });
   };
-
-  const redrawCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw background image if exists
-    if (backgroundImageRef.current) {
-      const img = backgroundImageRef.current;
-      const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-      const scaledWidth = img.width * scale;
-      const scaledHeight = img.height * scale;
-      const x = (canvas.width - scaledWidth) / 2;
-      const y = (canvas.height - scaledHeight) / 2;
-      
-      ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
-    }
-  }, []);
 
   const getMousePos = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
