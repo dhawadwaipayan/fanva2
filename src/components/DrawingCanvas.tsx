@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, X, Type, Eraser, Pencil, Undo, Redo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -44,20 +43,48 @@ export const DrawingCanvas = ({
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Draw text elements onto canvas for capture
+  const drawTextElementsOnCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Draw each text element onto the canvas
+    textElements.forEach(textElement => {
+      if (!textElement.isEditing && textElement.text.trim()) {
+        ctx.font = 'bold 18px Arial';
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'center';
+        ctx.fillText(textElement.text, textElement.x, textElement.y);
+      }
+    });
+  }, [textElements]);
+
   // Update canvas state and notify parent whenever canvas changes
   const updateCanvasState = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    // Get the complete canvas as image data (including annotations)
+    // First redraw the canvas to include background
+    redrawCanvas();
+    
+    // Then draw text elements on top
+    drawTextElementsOnCanvas();
+    
+    // Get the complete canvas as image data (including annotations and text)
     const canvasImageData = canvas.toDataURL();
     onImageChange?.(canvasImageData);
-  }, [onImageChange]);
+  }, [onImageChange, drawTextElementsOnCanvas]);
 
   // Update the displayed image when a new one is generated
   useEffect(() => {
     if (generatedImage) {
       setUploadedImage(generatedImage);
+      
+      // Clear text elements when new image is generated
+      setTextElements([]);
       
       // Create image element for canvas drawing
       const img = new Image();
