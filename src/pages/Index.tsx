@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { Undo, Redo, Upload, X, Loader2, Search, Download, ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -153,6 +154,19 @@ const Index = () => {
     input.click();
   };
 
+  // Handle mode switching - transfer sketch generated image to render canvas
+  const handleModeSwitch = (mode: 'sketch' | 'render') => {
+    if (mode === 'render' && activeMode === 'sketch' && sketchGeneratedImage) {
+      // Transfer the generated sketch image to the render canvas
+      setSketchImage(sketchGeneratedImage);
+      toast({
+        title: "Image transferred",
+        description: "Your generated sketch has been moved to the render canvas"
+      });
+    }
+    setActiveMode(mode);
+  };
+
   return (
     <div className="min-h-screen bg-[#1B1B1B] text-gray-100 flex flex-col">
       {/* Top Navigation */}
@@ -173,7 +187,7 @@ const Index = () => {
       <div className="flex justify-center p-6">
         <div className="bg-gray-700 rounded-lg p-1 flex border border-gray-600">
           <button
-            onClick={() => setActiveMode('sketch')}
+            onClick={() => handleModeSwitch('sketch')}
             className={`px-6 py-2 rounded-md transition-all duration-200 font-medium text-sm ${
               activeMode === 'sketch'
                 ? 'bg-blue-600 text-white'
@@ -183,7 +197,7 @@ const Index = () => {
             Sketch
           </button>
           <button
-            onClick={() => setActiveMode('render')}
+            onClick={() => handleModeSwitch('render')}
             className={`px-6 py-2 rounded-md transition-all duration-200 font-medium text-sm ${
               activeMode === 'render'
                 ? 'bg-blue-600 text-white'
@@ -223,7 +237,7 @@ const Index = () => {
               </Button>
               <Button
                 variant="secondary"
-                onClick={() => setActiveMode('render')}
+                onClick={() => handleModeSwitch('render')}
                 className="bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600 px-8"
               >
                 Render
