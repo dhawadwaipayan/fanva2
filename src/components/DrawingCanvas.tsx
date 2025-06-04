@@ -99,7 +99,7 @@ export const DrawingCanvas = ({
       };
       img.src = generatedImage;
     }
-  }, [generatedImage, updateCanvasState]);
+  }, [generatedImage]);
 
   const saveToHistory = useCallback(() => {
     const canvas = canvasRef.current;
@@ -181,29 +181,7 @@ export const DrawingCanvas = ({
     }
   };
 
-  const redrawCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw background image if exists
-    if (backgroundImageRef.current) {
-      const img = backgroundImageRef.current;
-      const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-      const scaledWidth = img.width * scale;
-      const scaledHeight = img.height * scale;
-      const x = (canvas.width - scaledWidth) / 2;
-      const y = (canvas.height - scaledHeight) / 2;
-      
-      ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
-    }
-  }, []);
-
+  // Initialize canvas only once
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -212,7 +190,8 @@ export const DrawingCanvas = ({
     canvas.height = canvas.offsetHeight;
     redrawCanvas();
     
-    if (history.length === 0) {
+    // Initialize history only if empty and we have an uploaded image
+    if (history.length === 0 && uploadedImage) {
       setTimeout(() => {
         const canvasData = canvas.toDataURL();
         const initialState: HistoryState = {
@@ -224,7 +203,7 @@ export const DrawingCanvas = ({
         updateCanvasState();
       }, 100);
     }
-  }, [uploadedImage, redrawCanvas, updateCanvasState]);
+  }, [uploadedImage]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -269,6 +248,8 @@ export const DrawingCanvas = ({
   };
 
   const handleRemoveImage = () => {
+    console.log('Remove image called');
+    
     // Clear all states
     setUploadedImage(null);
     backgroundImageRef.current = null;
@@ -282,6 +263,7 @@ export const DrawingCanvas = ({
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        console.log('Canvas cleared');
       }
     }
     
@@ -292,12 +274,36 @@ export const DrawingCanvas = ({
     
     // Notify parent that image is removed
     onImageChange?.(null);
+    console.log('Parent notified of image removal');
     
     toast({
       title: "Image removed",
       description: "The sketch has been removed from the canvas",
     });
   };
+
+  const redrawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw background image if exists
+    if (backgroundImageRef.current) {
+      const img = backgroundImageRef.current;
+      const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+      const scaledWidth = img.width * scale;
+      const scaledHeight = img.height * scale;
+      const x = (canvas.width - scaledWidth) / 2;
+      const y = (canvas.height - scaledHeight) / 2;
+      
+      ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+    }
+  }, []);
 
   const getMousePos = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
