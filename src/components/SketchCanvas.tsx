@@ -8,7 +8,9 @@ import { toast } from '@/hooks/use-toast';
 interface SketchCanvasProps {
   className?: string;
   onImageChange?: (image: string | null) => void;
+  onImageRemove?: () => void;
   generatedImage?: string | null;
+  uploadedImage?: string | null;
   zoom?: number;
   isPanning?: boolean;
 }
@@ -16,24 +18,36 @@ interface SketchCanvasProps {
 export const SketchCanvas = ({ 
   className, 
   onImageChange, 
-  generatedImage, 
+  onImageRemove,
+  generatedImage,
+  uploadedImage: externalUploadedImage,
   zoom = 1,
   isPanning = false 
 }: SketchCanvasProps) => {
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [internalUploadedImage, setInternalUploadedImage] = useState<string | null>(null);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Use external uploaded image if provided, otherwise use internal state
+  const displayedImage = externalUploadedImage || internalUploadedImage;
+
   // Update the displayed image when a new one is generated
   useEffect(() => {
     if (generatedImage) {
-      setUploadedImage(generatedImage);
+      setInternalUploadedImage(generatedImage);
       onImageChange?.(generatedImage);
     }
   }, [generatedImage, onImageChange]);
+
+  // Update internal state when external image changes
+  useEffect(() => {
+    if (externalUploadedImage !== undefined) {
+      setInternalUploadedImage(externalUploadedImage);
+    }
+  }, [externalUploadedImage]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -42,7 +56,7 @@ export const SketchCanvas = ({
         const reader = new FileReader();
         reader.onload = (e) => {
           const imageData = e.target?.result as string;
-          setUploadedImage(imageData);
+          setInternalUploadedImage(imageData);
           onImageChange?.(imageData);
           toast({
             title: "Image uploaded",
@@ -67,8 +81,9 @@ export const SketchCanvas = ({
   };
 
   const handleRemoveImage = () => {
-    setUploadedImage(null);
+    setInternalUploadedImage(null);
     onImageChange?.(null);
+    onImageRemove?.();
     setPanOffset({ x: 0, y: 0 });
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -80,7 +95,7 @@ export const SketchCanvas = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (isPanning && uploadedImage) {
+    if (isPanning && displayedImage) {
       setIsDragging(true);
       setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
     }
@@ -111,7 +126,7 @@ export const SketchCanvas = ({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
-      style={{ cursor: isPanning && uploadedImage ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
+      style={{ cursor: isPanning && displayedImage ? (isDragging ? 'grabbing' : 'grab') : 'default' }}
     >
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-800"></div>
@@ -130,7 +145,7 @@ export const SketchCanvas = ({
 
       {/* Content */}
       <div className="relative z-10 w-full h-full flex items-center justify-center p-8">
-        {uploadedImage ? (
+        {displayedImage ? (
           <div className="relative max-w-full max-h-full">
             <div
               style={{
@@ -140,7 +155,7 @@ export const SketchCanvas = ({
               }}
             >
               <img 
-                src={uploadedImage} 
+                src={displayedImage} 
                 alt="Uploaded sketch" 
                 className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
                 draggable={false}
