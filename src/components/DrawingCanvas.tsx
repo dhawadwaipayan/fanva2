@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, X, Type, Eraser, Pencil, Undo, Redo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -77,6 +78,29 @@ export const DrawingCanvas = ({
     const canvasImageData = canvas.toDataURL();
     onImageChange?.(canvasImageData);
   }, [onImageChange, drawTextElementsOnCanvas]);
+
+  const redrawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw background image if exists
+    if (backgroundImageRef.current) {
+      const img = backgroundImageRef.current;
+      const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+      const scaledWidth = img.width * scale;
+      const scaledHeight = img.height * scale;
+      const x = (canvas.width - scaledWidth) / 2;
+      const y = (canvas.height - scaledHeight) / 2;
+      
+      ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+    }
+  }, []);
 
   // Update the displayed image when a new one is generated
   useEffect(() => {
@@ -248,22 +272,24 @@ export const DrawingCanvas = ({
   };
 
   const handleRemoveImage = () => {
-    console.log('Remove image called');
+    console.log('Remove image called - starting cleanup');
     
-    // Clear all states
+    // Clear all states in the correct order
     setUploadedImage(null);
-    backgroundImageRef.current = null;
     setTextElements([]);
     setHistory([]);
     setHistoryIndex(-1);
     
-    // Clear the canvas
+    // Clear the background image reference
+    backgroundImageRef.current = null;
+    
+    // Clear the canvas immediately
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        console.log('Canvas cleared');
+        console.log('Canvas cleared successfully');
       }
     }
     
@@ -272,9 +298,16 @@ export const DrawingCanvas = ({
       fileInputRef.current.value = '';
     }
     
-    // Notify parent that image is removed
+    // Force immediate state update by calling onImageChange with null
+    console.log('Notifying parent of image removal');
     onImageChange?.(null);
-    console.log('Parent notified of image removal');
+    
+    // Force re-render by setting a small timeout
+    setTimeout(() => {
+      console.log('Forcing component re-render check');
+      // This will trigger any parent components to re-render
+      onImageChange?.(null);
+    }, 10);
     
     toast({
       title: "Image removed",
