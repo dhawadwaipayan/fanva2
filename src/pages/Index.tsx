@@ -1,5 +1,3 @@
-
-
 import { useState, useRef } from 'react';
 import { Undo, Redo, Upload, X, Loader2, Search, Download, ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,6 +7,7 @@ import { SketchCanvas } from '@/components/SketchCanvas';
 import { DrawingCanvas } from '@/components/DrawingCanvas';
 import { GenerationSettings } from '@/components/GenerationSettings';
 import { generateRealisticGarment } from '@/services/imageGeneration';
+import { MaterialSettings } from '@/components/MaterialSettings';
 
 const Index = () => {
   const [activeMode, setActiveMode] = useState<'sketch' | 'render'>('sketch');
@@ -23,7 +22,8 @@ const Index = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
-  
+  const [materialTexture, setMaterialTexture] = useState<string | null>(null);
+
   // Sketch mode states
   const [activeDrawingTool, setActiveDrawingTool] = useState<'draw' | 'erase' | 'text'>('draw');
 
@@ -384,8 +384,18 @@ const Index = () => {
 
             {/* Sidebar Content */}
             <div className="flex-1 p-6 space-y-6 overflow-y-auto">
-              {/* Generation Settings */}
-              <GenerationSettings apiKey={apiKey} onApiKeyChange={setApiKey} />
+              {activeSidebarTab === 'render' && (
+                <GenerationSettings apiKey={apiKey} onApiKeyChange={setApiKey} />
+              )}
+              {activeSidebarTab === 'colorways' && (
+                <div>
+                  <h3 className="text-lg font-medium text-white mb-4">Colorways</h3>
+                  <p className="text-gray-400">Colorway options coming soon...</p>
+                </div>
+              )}
+              {activeSidebarTab === 'material' && (
+                <MaterialSettings onMaterialChange={setMaterialTexture} />
+              )}
             </div>
 
             {/* Bottom Controls */}
@@ -421,4 +431,3 @@ const Index = () => {
 };
 
 export default Index;
-
