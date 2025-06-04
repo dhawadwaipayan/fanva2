@@ -269,14 +269,30 @@ export const DrawingCanvas = ({
   };
 
   const handleRemoveImage = () => {
+    // Clear all states
     setUploadedImage(null);
     backgroundImageRef.current = null;
     setTextElements([]);
-    onImageChange?.(null);
-    redrawCanvas();
+    setHistory([]);
+    setHistoryIndex(-1);
+    
+    // Clear the canvas
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+    
+    // Clear file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    
+    // Notify parent that image is removed
+    onImageChange?.(null);
+    
     toast({
       title: "Image removed",
       description: "The sketch has been removed from the canvas",
