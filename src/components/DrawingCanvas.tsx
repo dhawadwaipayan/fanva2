@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, X, Type, Bold, Eraser, Pencil } from 'lucide-react';
+import { Upload, X, Type, Bold, Eraser, Pencil, Undo, Redo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
@@ -20,6 +20,11 @@ interface TextElement {
   isDragging: boolean;
 }
 
+interface HistoryState {
+  canvasData: string;
+  textElements: TextElement[];
+}
+
 export const DrawingCanvas = ({ 
   className, 
   onImageChange, 
@@ -33,6 +38,8 @@ export const DrawingCanvas = ({
   const [showTextInput, setShowTextInput] = useState(false);
   const [newTextPosition, setNewTextPosition] = useState({ x: 0, y: 0 });
   const [inputText, setInputText] = useState('');
+  const [history, setHistory] = useState<HistoryState[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,6 +51,83 @@ export const DrawingCanvas = ({
       textInputRef.current.focus();
     }
   }, [showTextInput]);
+
+  const saveToHistory = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const canvasData = canvas.toDataURL();
+    const newState: HistoryState = {
+      canvasData,
+      textElements: [...textElements]
+    };
+
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(newState);
+    
+    // Limit history to 20 states
+    if (newHistory.length > 20) {
+      newHistory.shift();
+    } else {
+      setHistoryIndex(prev => prev + 1);
+    }
+    
+    setHistory(newHistory);
+  }, [history, historyIndex, textElements]);
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const prevIndex = historyIndex - 1;
+      const prevState = history[prevIndex];
+      
+      setHistoryIndex(prevIndex);
+      setTextElements(prevState.textElements);
+      
+      // Restore canvas
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext('2d');
+      if (canvas && ctx) {
+        const img = new Image();
+        img.onload = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+        };
+        img.src = prevState.canvasData;
+      }
+      
+      toast({
+        title: "Undo",
+        description: "Last action has been undone"
+      });
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      const nextIndex = historyIndex + 1;
+      const nextState = history[nextIndex];
+      
+      setHistoryIndex(nextIndex);
+      setTextElements(nextState.textElements);
+      
+      // Restore canvas
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext('2d');
+      if (canvas && ctx) {
+        const img = new Image();
+        img.onload = () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+        };
+        img.src = nextState.canvasData;
+      }
+      
+      toast({
+        title: "Redo",
+        description: "Action has been redone"
+      });
+    }
+  };
 
   const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
@@ -75,6 +159,13 @@ export const DrawingCanvas = ({
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
     redrawCanvas();
+    
+    // Save initial state
+    if (history.length === 0) {
+      setTimeout(() => {
+        saveToHistory();
+      }, 100);
+    }
   }, [uploadedImage, redrawCanvas]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,6 +183,10 @@ export const DrawingCanvas = ({
           img.onload = () => {
             backgroundImageRef.current = img;
             redrawCanvas();
+            // Save state after image upload
+            setTimeout(() => {
+              saveToHistory();
+            }, 100);
           };
           img.src = imageData;
           
@@ -154,8 +249,8 @@ export const DrawingCanvas = ({
     // Check if clicking on existing text
     const clickedText = textElements.find(text => {
       const textWidth = text.text.length * 12; // Approximate text width
-      return pos.x >= text.x && pos.x <= text.x + textWidth && 
-             pos.y >= text.y - 20 && pos.y <= text.y + 5;
+      return pos.x >= text.x - 50 && pos.x <= text.x + textWidth + 50 && 
+             pos.y >= text.y - 25 && pos.y <= text.y + 10;
     });
 
     if (clickedText) {
@@ -199,7 +294,13 @@ export const DrawingCanvas = ({
   };
 
   const handleMouseUp = () => {
-    setIsDrawing(false);
+    if (isDrawing) {
+      setIsDrawing(false);
+      // Save to history after drawing
+      setTimeout(() => {
+        saveToHistory();
+      }, 50);
+    }
     setTextElements(prev => prev.map(text => ({ ...text, isDragging: false })));
   };
 
@@ -241,6 +342,10 @@ export const DrawingCanvas = ({
         isDragging: false
       };
       setTextElements(prev => [...prev, newText]);
+      // Save to history after adding text
+      setTimeout(() => {
+        saveToHistory();
+      }, 50);
     }
     setShowTextInput(false);
     setInputText('');
@@ -259,6 +364,10 @@ export const DrawingCanvas = ({
     if (selectedText) {
       setTextElements(prev => prev.filter(text => text.id !== selectedText));
       setSelectedText(null);
+      // Save to history after deleting text
+      setTimeout(() => {
+        saveToHistory();
+      }, 50);
     }
   };
 
@@ -309,13 +418,24 @@ export const DrawingCanvas = ({
             {textElements.map((textElement) => (
               <div
                 key={textElement.id}
-                className={`absolute text-black font-bold text-lg cursor-move select-none pointer-events-none ${
-                  selectedText === textElement.id ? 'ring-2 ring-blue-500' : ''
+                className={`absolute text-black font-bold text-lg cursor-move select-none ${
+                  selectedText === textElement.id ? 'ring-2 ring-blue-500 bg-blue-50' : ''
                 }`}
                 style={{
                   left: textElement.x,
                   top: textElement.y - 20,
-                  transform: 'translate(-50%, -50%)'
+                  transform: 'translate(-50%, -50%)',
+                  padding: '2px 4px',
+                  borderRadius: '2px'
+                }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  setSelectedText(textElement.id);
+                  setTextElements(prev => prev.map(text => 
+                    text.id === textElement.id 
+                      ? { ...text, isDragging: true }
+                      : { ...text, isDragging: false }
+                  ));
                 }}
               >
                 {textElement.text}
@@ -331,7 +451,7 @@ export const DrawingCanvas = ({
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyPress}
                 onBlur={handleTextSubmit}
-                className="absolute bg-white border-2 border-blue-500 px-2 py-1 text-black font-bold text-lg rounded"
+                className="absolute bg-white border-2 border-blue-500 px-2 py-1 text-black font-bold text-lg rounded z-50"
                 style={{
                   left: newTextPosition.x,
                   top: newTextPosition.y - 20,
@@ -366,6 +486,24 @@ export const DrawingCanvas = ({
 
       {/* Tool indicators */}
       <div className="absolute top-4 left-4 flex gap-2">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleUndo}
+          disabled={historyIndex <= 0}
+          className="bg-gray-600 text-gray-200 disabled:opacity-50"
+        >
+          <Undo className="w-4 h-4" />
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleRedo}
+          disabled={historyIndex >= history.length - 1}
+          className="bg-gray-600 text-gray-200 disabled:opacity-50"
+        >
+          <Redo className="w-4 h-4" />
+        </Button>
         <Button
           variant={activeDrawingTool === 'draw' ? 'default' : 'secondary'}
           size="sm"
