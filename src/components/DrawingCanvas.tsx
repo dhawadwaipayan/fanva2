@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Upload, X, Type, Bold, Eraser, Pencil, Undo, Redo } from 'lucide-react';
+import { Upload, X, Type, Eraser, Pencil, Undo, Redo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
@@ -45,6 +45,7 @@ export const DrawingCanvas = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (showTextInput && textInputRef.current) {
@@ -91,6 +92,7 @@ export const DrawingCanvas = ({
         img.onload = () => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0);
+          redrawCanvas();
         };
         img.src = prevState.canvasData;
       }
@@ -118,6 +120,7 @@ export const DrawingCanvas = ({
         img.onload = () => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0);
+          redrawCanvas();
         };
         img.src = nextState.canvasData;
       }
@@ -236,16 +239,28 @@ export const DrawingCanvas = ({
     };
   };
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const pos = getMousePos(e);
+  const getTextClickPos = (e: React.MouseEvent<HTMLDivElement>) => {
+    const container = containerRef.current;
+    if (!container) return { x: 0, y: 0 };
     
+    const rect = container.getBoundingClientRect();
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  };
+
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (activeDrawingTool === 'text') {
+      const pos = getMousePos(e);
       setNewTextPosition(pos);
       setShowTextInput(true);
       setInputText('');
       return;
     }
 
+    const pos = getMousePos(e);
+    
     // Check if clicking on existing text
     const clickedText = textElements.find(text => {
       const textWidth = text.text.length * 12; // Approximate text width
@@ -265,6 +280,13 @@ export const DrawingCanvas = ({
 
     setSelectedText(null);
     setTextElements(prev => prev.map(text => ({ ...text, isDragging: false })));
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (activeDrawingTool === 'text') {
+      handleCanvasClick(e);
+      return;
+    }
 
     if (activeDrawingTool === 'draw' || activeDrawingTool === 'erase') {
       setIsDrawing(true);
@@ -385,107 +407,9 @@ export const DrawingCanvas = ({
   }, [selectedText, showTextInput]);
 
   return (
-    <Card className={`bg-gray-800 border-gray-700 flex items-center justify-center relative overflow-hidden ${className}`}>
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-800"></div>
-      
-      {/* Grid pattern overlay */}
-      <div 
-        className="absolute inset-0 opacity-10"
-        style={{
-          backgroundImage: `
-            linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
-          `,
-          backgroundSize: '20px 20px'
-        }}
-      />
-
-      {/* Content */}
-      <div className="relative z-10 w-full h-full flex items-center justify-center p-8">
-        {uploadedImage ? (
-          <div className="relative w-full h-full">
-            <canvas
-              ref={canvasRef}
-              className="w-full h-full object-contain rounded-lg shadow-2xl bg-white cursor-crosshair"
-              onMouseDown={handleMouseDown}
-              onMouseMove={handleMouseMove}
-              onMouseUp={handleMouseUp}
-              onMouseLeave={handleMouseUp}
-            />
-            
-            {/* Text elements overlay */}
-            {textElements.map((textElement) => (
-              <div
-                key={textElement.id}
-                className={`absolute text-black font-bold text-lg cursor-move select-none ${
-                  selectedText === textElement.id ? 'ring-2 ring-blue-500 bg-blue-50' : ''
-                }`}
-                style={{
-                  left: textElement.x,
-                  top: textElement.y - 20,
-                  transform: 'translate(-50%, -50%)',
-                  padding: '2px 4px',
-                  borderRadius: '2px'
-                }}
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  setSelectedText(textElement.id);
-                  setTextElements(prev => prev.map(text => 
-                    text.id === textElement.id 
-                      ? { ...text, isDragging: true }
-                      : { ...text, isDragging: false }
-                  ));
-                }}
-              >
-                {textElement.text}
-              </div>
-            ))}
-
-            {/* Text input overlay */}
-            {showTextInput && (
-              <input
-                ref={textInputRef}
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={handleKeyPress}
-                onBlur={handleTextSubmit}
-                className="absolute bg-white border-2 border-blue-500 px-2 py-1 text-black font-bold text-lg rounded z-50"
-                style={{
-                  left: newTextPosition.x,
-                  top: newTextPosition.y - 20,
-                  transform: 'translate(-50%, -50%)'
-                }}
-                placeholder="Enter text..."
-              />
-            )}
-
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleRemoveImage}
-              className="absolute top-2 right-2 w-8 h-8 p-0"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        ) : (
-          <div 
-            className="bg-gray-300 w-64 h-64 rounded-lg flex flex-col items-center justify-center shadow-2xl transform hover:scale-105 transition-transform duration-300 cursor-pointer border-2 border-dashed border-gray-400"
-            onClick={handleUploadClick}
-          >
-            <Upload className="w-12 h-12 text-gray-600 mb-4" />
-            <span className="text-gray-600 font-semibold text-lg mb-2">Upload Flat Sketch</span>
-            <span className="text-gray-500 text-sm text-center px-4">
-              Click to upload an image of your flat sketch
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Tool indicators */}
-      <div className="absolute top-4 left-4 flex gap-2">
+    <div className="flex flex-col gap-4 h-full">
+      {/* Tools Bar - Outside canvas */}
+      <div className="flex gap-2 justify-center">
         <Button
           variant="secondary"
           size="sm"
@@ -530,14 +454,116 @@ export const DrawingCanvas = ({
         </Button>
       </div>
 
-      {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleImageUpload}
-        className="hidden"
-      />
-    </Card>
+      {/* Canvas Container */}
+      <Card className={`bg-gray-800 border-gray-700 flex items-center justify-center relative overflow-hidden flex-1 ${className}`}>
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-700 to-gray-800"></div>
+        
+        {/* Grid pattern overlay */}
+        <div 
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: `
+              linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
+            `,
+            backgroundSize: '20px 20px'
+          }}
+        />
+
+        {/* Content */}
+        <div ref={containerRef} className="relative z-10 w-full h-full flex items-center justify-center p-8">
+          {uploadedImage ? (
+            <div className="relative w-full h-full">
+              <canvas
+                ref={canvasRef}
+                className="w-full h-full object-contain rounded-lg shadow-2xl bg-white cursor-crosshair"
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onClick={activeDrawingTool === 'text' ? handleCanvasClick : undefined}
+              />
+              
+              {/* Text elements overlay */}
+              {textElements.map((textElement) => (
+                <div
+                  key={textElement.id}
+                  className={`absolute text-black font-bold text-lg cursor-move select-none ${
+                    selectedText === textElement.id ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                  }`}
+                  style={{
+                    left: textElement.x,
+                    top: textElement.y - 20,
+                    transform: 'translate(-50%, -50%)',
+                    padding: '2px 4px',
+                    borderRadius: '2px'
+                  }}
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    setSelectedText(textElement.id);
+                    setTextElements(prev => prev.map(text => 
+                      text.id === textElement.id 
+                        ? { ...text, isDragging: true }
+                        : { ...text, isDragging: false }
+                    ));
+                  }}
+                >
+                  {textElement.text}
+                </div>
+              ))}
+
+              {/* Text input overlay */}
+              {showTextInput && (
+                <input
+                  ref={textInputRef}
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  onBlur={handleTextSubmit}
+                  className="absolute bg-white border-2 border-blue-500 px-2 py-1 text-black font-bold text-lg rounded z-50"
+                  style={{
+                    left: newTextPosition.x,
+                    top: newTextPosition.y - 20,
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                  placeholder="Enter text..."
+                />
+              )}
+
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleRemoveImage}
+                className="absolute top-2 right-2 w-8 h-8 p-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <div 
+              className="bg-gray-300 w-64 h-64 rounded-lg flex flex-col items-center justify-center shadow-2xl transform hover:scale-105 transition-transform duration-300 cursor-pointer border-2 border-dashed border-gray-400"
+              onClick={handleUploadClick}
+            >
+              <Upload className="w-12 h-12 text-gray-600 mb-4" />
+              <span className="text-gray-600 font-semibold text-lg mb-2">Upload Flat Sketch</span>
+              <span className="text-gray-500 text-sm text-center px-4">
+                Click to upload an image of your flat sketch
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          className="hidden"
+        />
+      </Card>
+    </div>
   );
 };
