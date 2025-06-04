@@ -290,13 +290,22 @@ export const DrawingCanvas = ({
     setHistory([]);
     setHistoryIndex(-1);
     
-    // Clear the canvas
+    // Clear the canvas completely
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.globalCompositeOperation = 'source-over'; // Reset composite operation
+        // Save current dimensions
+        const width = canvas.width;
+        const height = canvas.height;
+        
+        // Clear everything
+        ctx.clearRect(0, 0, width, height);
+        ctx.globalCompositeOperation = 'source-over';
+        
+        // Reset canvas size to force complete reset
+        canvas.width = width;
+        canvas.height = height;
       }
     }
     
@@ -305,8 +314,21 @@ export const DrawingCanvas = ({
       fileInputRef.current.value = '';
     }
     
-    // Notify parent component
+    // Notify parent component immediately
     onImageChange?.(null);
+    
+    // Initialize empty history state
+    setTimeout(() => {
+      if (canvas) {
+        const canvasData = canvas.toDataURL();
+        const initialState: HistoryState = {
+          canvasData,
+          textElements: []
+        };
+        setHistory([initialState]);
+        setHistoryIndex(0);
+      }
+    }, 100);
     
     toast({
       title: "Image removed",
