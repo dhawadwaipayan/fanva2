@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { SketchCanvas } from '@/components/SketchCanvas';
+import { DrawingCanvas } from '@/components/DrawingCanvas';
 import { GenerationSettings } from '@/components/GenerationSettings';
 import { generateRealisticGarment } from '@/services/imageGeneration';
 
@@ -19,7 +20,7 @@ const Index = () => {
   const [isPanning, setIsPanning] = useState(false);
   
   // Sketch mode states
-  const [activeDrawingTool, setActiveDrawingTool] = useState<'draw' | 'erase' | 'size'>('draw');
+  const [activeDrawingTool, setActiveDrawingTool] = useState<'draw' | 'erase' | 'text'>('draw');
   
   const materialFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -266,15 +267,15 @@ const Index = () => {
                 Erase
               </Button>
               <Button
-                variant={activeDrawingTool === 'size' ? 'default' : 'secondary'}
-                onClick={() => setActiveDrawingTool('size')}
+                variant={activeDrawingTool === 'text' ? 'default' : 'secondary'}
+                onClick={() => setActiveDrawingTool('text')}
                 className={`w-full justify-start ${
-                  activeDrawingTool === 'size'
+                  activeDrawingTool === 'text'
                     ? 'bg-blue-600 hover:bg-blue-700 text-white'
                     : 'bg-gray-700 hover:bg-gray-600 text-gray-200 border-gray-600'
                 }`}
               >
-                Size
+                Text
               </Button>
             </div>
           </div>
@@ -282,12 +283,11 @@ const Index = () => {
           {/* Center Canvas Area */}
           <div className="flex-1 flex flex-col">
             <div className="bg-gray-700 rounded-lg border border-gray-600 p-4 flex-1">
-              <SketchCanvas
+              <DrawingCanvas
                 className="h-full rounded-lg bg-[#1B1B1B]"
                 onImageChange={setSketchImage}
-                generatedImage={generatedImage}
-                zoom={zoom}
-                isPanning={isPanning}
+                activeDrawingTool={activeDrawingTool}
+                onToolChange={setActiveDrawingTool}
               />
             </div>
             
