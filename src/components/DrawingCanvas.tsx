@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, X, Type, Eraser, Pencil, Undo, Redo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -61,7 +62,7 @@ export const DrawingCanvas = ({
       };
       img.src = generatedImage;
     }
-  }, [generatedImage, onImageChange]);
+  }, [generatedImage]);
 
   const saveToHistory = useCallback(() => {
     const canvas = canvasRef.current;
@@ -228,14 +229,32 @@ export const DrawingCanvas = ({
   };
 
   const handleRemoveImage = () => {
+    // Clear all states
     setUploadedImage(null);
-    backgroundImageRef.current = null;
     setTextElements([]);
-    onImageChange?.(null);
-    redrawCanvas();
+    setHistory([]);
+    setHistoryIndex(-1);
+    
+    // Clear background image reference
+    backgroundImageRef.current = null;
+    
+    // Clear file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+    
+    // Clear canvas
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+    
+    // Notify parent component
+    onImageChange?.(null);
+    
     toast({
       title: "Image removed",
       description: "The sketch has been removed from the canvas",
