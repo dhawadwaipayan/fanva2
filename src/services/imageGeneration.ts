@@ -1,10 +1,10 @@
-
 interface GenerationRequest {
   flatSketch: string;
   materialImage?: string;
   apiKey: string;
   stream?: boolean;
   onPartialImage?: (imageUrl: string) => void;
+  isSketchMode?: boolean;
 }
 
 interface ImageContent {
@@ -24,7 +24,8 @@ export const generateRealisticGarment = async ({
   materialImage,
   apiKey,
   stream = true,
-  onPartialImage
+  onPartialImage,
+  isSketchMode = false
 }: GenerationRequest): Promise<string> => {
   if (!apiKey) {
     throw new Error('OpenAI API key is required');
@@ -47,12 +48,17 @@ export const generateRealisticGarment = async ({
       });
     }
 
+    // Different prompts based on mode
+    const promptText = isSketchMode 
+      ? "redo the flat sketch in same style as per the given prompts in the image"
+      : materialImage 
+        ? "use the material reference to turn the flat sketch into a realistic garment"
+        : "turn this flat sketch into a realistic garment";
+
     // Add text instruction as a separate object
     inputContent.push({
       type: "input_text",
-      text: materialImage 
-        ? "use the material reference to turn the flat sketch into a realistic garment"
-        : "turn this flat sketch into a realistic garment"
+      text: promptText
     });
 
     const requestBody = {

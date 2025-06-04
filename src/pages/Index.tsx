@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { Undo, Redo, Upload, X, Loader2, Search, Download, ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,6 +13,7 @@ const Index = () => {
   const [activeSidebarTab, setActiveSidebarTab] = useState<'render' | 'colorways' | 'material'>('render');
   const [sketchImage, setSketchImage] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [sketchGeneratedImage, setSketchGeneratedImage] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -57,16 +57,27 @@ const Index = () => {
     try {
       toast({
         title: "Generation Started",
-        description: "AI is creating your realistic garment..."
+        description: activeMode === 'sketch' 
+          ? "AI is redoing your flat sketch..." 
+          : "AI is creating your realistic garment..."
       });
       const generatedUrl = await generateRealisticGarment({
         flatSketch: sketchImage,
-        apiKey: apiKey
+        apiKey: apiKey,
+        isSketchMode: activeMode === 'sketch'
       });
-      setGeneratedImage(generatedUrl);
+      
+      if (activeMode === 'sketch') {
+        setSketchGeneratedImage(generatedUrl);
+      } else {
+        setGeneratedImage(generatedUrl);
+      }
+      
       toast({
         title: "Generation Complete!",
-        description: "Your realistic garment has been generated"
+        description: activeMode === 'sketch' 
+          ? "Your flat sketch has been redone" 
+          : "Your realistic garment has been generated"
       });
     } catch (error) {
       console.error('Generation failed:', error);
@@ -189,6 +200,7 @@ const Index = () => {
                 onImageChange={setSketchImage}
                 activeDrawingTool={activeDrawingTool}
                 onToolChange={setActiveDrawingTool}
+                generatedImage={sketchGeneratedImage}
               />
             </div>
             

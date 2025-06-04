@@ -9,6 +9,7 @@ interface DrawingCanvasProps {
   onImageChange?: (image: string | null) => void;
   activeDrawingTool: 'draw' | 'erase' | 'text';
   onToolChange: (tool: 'draw' | 'erase' | 'text') => void;
+  generatedImage?: string | null;
 }
 
 interface TextElement {
@@ -28,7 +29,8 @@ export const DrawingCanvas = ({
   className, 
   onImageChange, 
   activeDrawingTool,
-  onToolChange
+  onToolChange,
+  generatedImage
 }: DrawingCanvasProps) => {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -40,6 +42,26 @@ export const DrawingCanvas = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Update the displayed image when a new one is generated
+  useEffect(() => {
+    if (generatedImage) {
+      setUploadedImage(generatedImage);
+      onImageChange?.(generatedImage);
+      
+      // Create image element for canvas drawing
+      const img = new Image();
+      img.onload = () => {
+        backgroundImageRef.current = img;
+        redrawCanvas();
+        // Save state after image update
+        setTimeout(() => {
+          saveToHistory();
+        }, 100);
+      };
+      img.src = generatedImage;
+    }
+  }, [generatedImage, onImageChange]);
 
   const saveToHistory = useCallback(() => {
     const canvas = canvasRef.current;
