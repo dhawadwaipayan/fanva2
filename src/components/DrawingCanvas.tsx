@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, X, Type, Eraser, Pencil, Undo, Redo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { toast } from '@/hooks/use-toast';
 interface DrawingCanvasProps {
   className?: string;
   onImageChange?: (image: string | null) => void;
+  onAnnotatedImageChange?: (annotatedImage: string | null) => void;
   activeDrawingTool: 'draw' | 'erase' | 'text';
   onToolChange: (tool: 'draw' | 'erase' | 'text') => void;
   generatedImage?: string | null;
@@ -29,6 +29,7 @@ interface HistoryState {
 export const DrawingCanvas = ({ 
   className, 
   onImageChange, 
+  onAnnotatedImageChange,
   activeDrawingTool,
   onToolChange,
   generatedImage
@@ -44,6 +45,48 @@ export const DrawingCanvas = ({
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Function to capture the complete canvas with annotations
+  const captureAnnotatedCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+
+    // Create a temporary canvas to render everything together
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) return null;
+
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+
+    // Draw the current canvas content (background image + drawings)
+    tempCtx.drawImage(canvas, 0, 0);
+
+    // Draw text elements on top
+    tempCtx.font = 'bold 18px Arial';
+    tempCtx.fillStyle = '#000000';
+    tempCtx.strokeStyle = '#ffffff';
+    tempCtx.lineWidth = 3;
+
+    textElements.forEach(textElement => {
+      if (!textElement.isEditing && textElement.text.trim()) {
+        const x = textElement.x;
+        const y = textElement.y;
+        
+        // Draw text outline for better visibility
+        tempCtx.strokeText(textElement.text, x, y);
+        tempCtx.fillText(textElement.text, x, y);
+      }
+    });
+
+    return tempCanvas.toDataURL();
+  }, [textElements]);
+
+  // Update annotated image whenever canvas or text changes
+  const updateAnnotatedImage = useCallback(() => {
+    const annotatedImageData = captureAnnotatedCanvas();
+    onAnnotatedImageChange?.(annotatedImageData);
+  }, [captureAnnotatedCanvas, onAnnotatedImageChange]);
+
   // Update the displayed image when a new one is generated
   useEffect(() => {
     if (generatedImage) {
@@ -58,6 +101,7 @@ export const DrawingCanvas = ({
         // Save state after image update
         setTimeout(() => {
           saveToHistory();
+          updateAnnotatedImage();
         }, 100);
       };
       img.src = generatedImage;
@@ -84,7 +128,10 @@ export const DrawingCanvas = ({
     }
     
     setHistory(newHistory);
-  }, [history, historyIndex, textElements]);
+    
+    // Update annotated image after saving to history
+    setTimeout(() => updateAnnotatedImage(), 50);
+  }, [history, historyIndex, textElements, updateAnnotatedImage]);
 
   const handleUndo = () => {
     if (historyIndex > 0) {
@@ -102,6 +149,7 @@ export const DrawingCanvas = ({
           img.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0);
+            updateAnnotatedImage();
           };
           img.src = prevState.canvasData;
         }
@@ -130,6 +178,7 @@ export const DrawingCanvas = ({
           img.onload = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0);
+            updateAnnotatedImage();
           };
           img.src = nextState.canvasData;
         }
@@ -182,9 +231,10 @@ export const DrawingCanvas = ({
         };
         setHistory([initialState]);
         setHistoryIndex(0);
+        updateAnnotatedImage();
       }, 100);
     }
-  }, [uploadedImage, redrawCanvas]);
+  }, [uploadedImage, redrawCanvas, updateAnnotatedImage]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -254,6 +304,7 @@ export const DrawingCanvas = ({
     
     // Notify parent component
     onImageChange?.(null);
+    onAnnotatedImageChange?.(null);
     
     toast({
       title: "Image removed",

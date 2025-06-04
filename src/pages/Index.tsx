@@ -12,6 +12,7 @@ const Index = () => {
   const [activeMode, setActiveMode] = useState<'sketch' | 'render'>('sketch');
   const [activeSidebarTab, setActiveSidebarTab] = useState<'render' | 'colorways' | 'material'>('render');
   const [sketchImage, setSketchImage] = useState<string | null>(null);
+  const [annotatedSketchImage, setAnnotatedSketchImage] = useState<string | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [sketchGeneratedImage, setSketchGeneratedImage] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState<string>('');
@@ -45,7 +46,11 @@ const Index = () => {
       });
       return;
     }
-    if (!sketchImage) {
+
+    // Use annotated image if available, otherwise use the original sketch
+    const imageToUse = annotatedSketchImage || sketchImage;
+    
+    if (!imageToUse) {
       toast({
         title: "Sketch Required",
         description: "Please upload a flat sketch first",
@@ -53,16 +58,18 @@ const Index = () => {
       });
       return;
     }
+
     setIsGenerating(true);
     try {
       toast({
         title: "Generation Started",
         description: activeMode === 'sketch' 
-          ? "AI is redoing your flat sketch..." 
-          : "AI is creating your realistic garment..."
+          ? "AI is redoing your flat sketch with annotations..." 
+          : "AI is creating your realistic garment with annotations..."
       });
+      
       const generatedUrl = await generateRealisticGarment({
-        flatSketch: sketchImage,
+        flatSketch: imageToUse, // This now includes all annotations and drawings
         apiKey: apiKey,
         isSketchMode: activeMode === 'sketch'
       });
@@ -76,8 +83,8 @@ const Index = () => {
       toast({
         title: "Generation Complete!",
         description: activeMode === 'sketch' 
-          ? "Your flat sketch has been redone" 
-          : "Your realistic garment has been generated"
+          ? "Your flat sketch with annotations has been redone" 
+          : "Your realistic garment with annotations has been generated"
       });
     } catch (error) {
       console.error('Generation failed:', error);
@@ -198,6 +205,7 @@ const Index = () => {
               <DrawingCanvas
                 className="h-full rounded-lg bg-[#1B1B1B]"
                 onImageChange={setSketchImage}
+                onAnnotatedImageChange={setAnnotatedSketchImage}
                 activeDrawingTool={activeDrawingTool}
                 onToolChange={setActiveDrawingTool}
                 generatedImage={sketchGeneratedImage}
