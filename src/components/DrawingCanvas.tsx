@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, X, Type, Eraser, Pencil, Undo, Redo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,71 +44,20 @@ export const DrawingCanvas = ({
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Draw text elements onto canvas for capture
-  const drawTextElementsOnCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Draw each text element onto the canvas
-    textElements.forEach(textElement => {
-      if (!textElement.isEditing && textElement.text.trim()) {
-        ctx.font = 'bold 18px Arial';
-        ctx.fillStyle = '#000000';
-        ctx.textAlign = 'center';
-        ctx.fillText(textElement.text, textElement.x, textElement.y);
-      }
-    });
-  }, [textElements]);
-
   // Update canvas state and notify parent whenever canvas changes
   const updateCanvasState = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     
-    // First redraw the canvas to include background
-    redrawCanvas();
-    
-    // Then draw text elements on top
-    drawTextElementsOnCanvas();
-    
-    // Get the complete canvas as image data (including annotations and text)
+    // Get the complete canvas as image data (including annotations)
     const canvasImageData = canvas.toDataURL();
     onImageChange?.(canvasImageData);
-  }, [onImageChange, drawTextElementsOnCanvas]);
-
-  const redrawCanvas = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw background image if exists
-    if (backgroundImageRef.current) {
-      const img = backgroundImageRef.current;
-      const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-      const scaledWidth = img.width * scale;
-      const scaledHeight = img.height * scale;
-      const x = (canvas.width - scaledWidth) / 2;
-      const y = (canvas.height - scaledHeight) / 2;
-      
-      ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
-    }
-  }, []);
+  }, [onImageChange]);
 
   // Update the displayed image when a new one is generated
   useEffect(() => {
     if (generatedImage) {
       setUploadedImage(generatedImage);
-      
-      // Clear text elements when new image is generated
-      setTextElements([]);
       
       // Create image element for canvas drawing
       const img = new Image();
@@ -122,7 +72,7 @@ export const DrawingCanvas = ({
       };
       img.src = generatedImage;
     }
-  }, [generatedImage]);
+  }, [generatedImage, updateCanvasState]);
 
   const saveToHistory = useCallback(() => {
     const canvas = canvasRef.current;
@@ -204,7 +154,29 @@ export const DrawingCanvas = ({
     }
   };
 
-  // Initialize canvas only once
+  const redrawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw background image if exists
+    if (backgroundImageRef.current) {
+      const img = backgroundImageRef.current;
+      const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+      const scaledWidth = img.width * scale;
+      const scaledHeight = img.height * scale;
+      const x = (canvas.width - scaledWidth) / 2;
+      const y = (canvas.height - scaledHeight) / 2;
+      
+      ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+    }
+  }, []);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -213,8 +185,7 @@ export const DrawingCanvas = ({
     canvas.height = canvas.offsetHeight;
     redrawCanvas();
     
-    // Initialize history only if empty and we have an uploaded image
-    if (history.length === 0 && uploadedImage) {
+    if (history.length === 0) {
       setTimeout(() => {
         const canvasData = canvas.toDataURL();
         const initialState: HistoryState = {
@@ -226,7 +197,7 @@ export const DrawingCanvas = ({
         updateCanvasState();
       }, 100);
     }
-  }, [uploadedImage]);
+  }, [uploadedImage, redrawCanvas, updateCanvasState]);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -271,43 +242,14 @@ export const DrawingCanvas = ({
   };
 
   const handleRemoveImage = () => {
-    console.log('Remove image called - starting cleanup');
-    
-    // Clear all states in the correct order
     setUploadedImage(null);
-    setTextElements([]);
-    setHistory([]);
-    setHistoryIndex(-1);
-    
-    // Clear the background image reference
     backgroundImageRef.current = null;
-    
-    // Clear the canvas immediately
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        console.log('Canvas cleared successfully');
-      }
-    }
-    
-    // Clear file input
+    setTextElements([]);
+    onImageChange?.(null);
+    redrawCanvas();
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    
-    // Force immediate state update by calling onImageChange with null
-    console.log('Notifying parent of image removal');
-    onImageChange?.(null);
-    
-    // Force re-render by setting a small timeout
-    setTimeout(() => {
-      console.log('Forcing component re-render check');
-      // This will trigger any parent components to re-render
-      onImageChange?.(null);
-    }, 10);
-    
     toast({
       title: "Image removed",
       description: "The sketch has been removed from the canvas",
