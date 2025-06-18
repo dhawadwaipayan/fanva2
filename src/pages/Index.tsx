@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { Undo, Redo, Upload, X, Loader2, Search, Download, ZoomIn, ZoomOut, Move } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { DrawingCanvas } from '@/components/DrawingCanvas';
 import { GenerationSettings } from '@/components/GenerationSettings';
 import { generateRealisticGarment } from '@/services/imageGeneration';
 import { MaterialSettings } from '@/components/MaterialSettings';
+import { UserMenu } from '@/components/UserMenu';
 
 const Index = () => {
   const [activeMode, setActiveMode] = useState<'sketch' | 'render'>('sketch');
@@ -201,6 +201,7 @@ const Index = () => {
           </div>
           <h1 className="text-2xl font-medium text-white">Fanva v1.0</h1>
         </div>
+        <UserMenu />
       </div>
 
       {/* Mode Toggle */}
